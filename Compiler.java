@@ -1,4 +1,5 @@
 import Analysis.Lexer;
+import Analysis.Parser;
 import Error.Error;
 
 import java.io.*;
@@ -11,7 +12,7 @@ public class Compiler {
 
         Error error = new Error(errorOutput);
         Lexer lexer = new Lexer(input, lexerOutput, error);
-        lexer.next();
+        Parser parser = new Parser(lexer);
 
         input.close();
         lexerOutput.close();

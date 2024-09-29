@@ -248,8 +248,9 @@ public class Lexer {
         }
         // write token and string into result file
         if (currentToken != null) {
-            outputfile.write(currentToken.toString() + " " + s + "\n");
+            outputfile.write(currentToken + " " + s + "\n");
+        } else {
+            next();
         }
-        next();
     }
 }
