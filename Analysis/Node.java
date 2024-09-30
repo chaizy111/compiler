@@ -1,9 +1,11 @@
 package Analysis;
 
+import java.io.FileWriter;
+import java.io.IOException;
 import java.util.ArrayList;
 
-public class Node {
-
+public abstract class Node {
+    abstract void print(FileWriter output) throws IOException;
 }
 
 class CompUnit extends Node{
@@ -16,18 +18,28 @@ class CompUnit extends Node{
         funcDefArrayList = new ArrayList<>();
         mainFuncDef = null;
     }
+
+    @Override
+    void print(FileWriter output) throws IOException {
+        output.write("<CompUnit>" + "\n");
+    }
 }
 
-class Decl extends Node{
-
+abstract class Decl extends Node{
 }
 
-class ConstDecl extends Node{
-
+class ConstDecl extends Decl{
+    @Override
+    void print(FileWriter output) throws IOException{
+        output.write("<ConstDecl>" + "\n");
+    }
 }
 
-class ValDecl extends Node{
-
+class ValDecl extends Decl{
+    @Override
+    void print(FileWriter output) throws IOException{
+        output.write("<VarDecl>" + "\n");
+    }
 }
 
 class ConstDef extends Node{
