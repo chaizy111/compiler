@@ -1,6 +1,6 @@
 import Analysis.Lexer;
 import Analysis.Parser;
-import Error.Error;
+import Error.ErrorDealer;
 
 import java.io.*;
 
@@ -10,9 +10,10 @@ public class Compiler {
         FileWriter output = new FileWriter("lexer.txt");
         FileWriter errorOutput = new FileWriter("error.txt");
 
-        Error error = new Error(errorOutput);
-        Lexer lexer = new Lexer(input, output, error);
-        Parser parser = new Parser(lexer, output);
+        ErrorDealer errorDealer = new ErrorDealer(errorOutput);
+        Lexer lexer = new Lexer(input, output, errorDealer);
+        Parser parser = new Parser(lexer, output, errorDealer);
+        parser.parse();
 
         input.close();
         output.close();

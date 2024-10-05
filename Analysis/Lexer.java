@@ -1,8 +1,7 @@
 package Analysis;
 
-import Error.Error;
+import Error.ErrorDealer;
 
-import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
@@ -16,12 +15,12 @@ public class Lexer {
     private Character currentChar;
     private int currentLine;
     private boolean isEnd;
-    private Error error;
+    private ErrorDealer errorDealer;
 
-    public Lexer(InputStream file, FileWriter outputfile, Error e) {
+    public Lexer(InputStream file, FileWriter outputfile, ErrorDealer e) {
         this.file = file;
         this.outputfile = outputfile;
-        this.error = e;
+        this.errorDealer = e;
         this.currentToken = null;
         this.currentChar = 0;
         this.currentLine = 0;
@@ -53,6 +52,10 @@ public class Lexer {
 
     public char getCurrentChar() {
         return currentChar;
+    }
+
+    public int getCurrentLine(){
+        return currentLine;
     }
 
     public boolean isCurrentCharDigit() {
@@ -154,7 +157,7 @@ public class Lexer {
             } else {
                 s = s.concat("&"); //correct the wrong place
                 file.reset();
-                error.errorA(currentLine + 1);
+                errorDealer.errorA(currentLine + 1);
             }
         } else if (currentChar == '|') { // Judge ||
             getchar();
@@ -164,7 +167,7 @@ public class Lexer {
             } else {
                 s = s.concat("|"); //correct the wrong place;
                 file.reset();
-                error.errorA(currentLine + 1);
+                errorDealer.errorA(currentLine + 1);
             }
         } else if (currentChar == '+') { // Judge +
             currentToken = TokenType.tokenType.PLUS;
