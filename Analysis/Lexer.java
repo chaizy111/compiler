@@ -85,7 +85,10 @@ public class Lexer {
 
     public void next() throws IOException{
         passSpace();
-        if (isEnd) return; // If we reach the end of program, then stop
+        if (isEnd) {
+            currentToken = TokenType.tokenType.END;
+            return; // If we reach the end of program, then stop
+        }
         currentToken = null;
         String s = currentChar.toString();
         if (isCurrentCharAlpha() || currentChar == '_') { // Judge Indent and reversed word

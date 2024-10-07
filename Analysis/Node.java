@@ -1,6 +1,5 @@
 package Analysis;
 
-import com.sun.tools.javac.Main;
 
 import java.io.FileWriter;
 import java.io.IOException;
@@ -27,7 +26,7 @@ class CompUnit extends Node{
     }
 }
 
-abstract class Decl extends Node{
+abstract class Decl extends BlockItem{
 }
 
 class ConstDecl extends Decl{
@@ -140,7 +139,18 @@ class FuncParam extends Node{
     }
 }
 
-class Stmt extends Node{
+abstract class BlockItem extends Node{
+
+}
+
+class Stmt extends BlockItem{
+    public Block b;
+    public Exp e;
+
+    public Stmt(){
+        b = null;
+        e = null;
+    }
     @Override
     void print(FileWriter output) throws IOException{
         output.write("<Stmt>" + "\n");
@@ -148,14 +158,71 @@ class Stmt extends Node{
 }
 
 class IfStmt extends Stmt{
+    public Cond c;
+    public Stmt s1;
+    public Stmt s2;
 
+    public IfStmt(){
+        c = null;
+        s1 = null;
+        s2 = null;
+    }
 }
 
 class ForStmt extends Stmt{
+    public LValStmt l1;
+    public LValStmt l2;
+    public Cond c;
+    public Stmt s;
 
+    public ForStmt(){
+        l1 = null;
+        l2 = null;
+        c = null;
+        s = null;
+    }
+}
+
+class ReturnStmt extends Stmt{
+    public Exp exp;
+
+    public ReturnStmt(){
+        exp = null;
+    }
+}
+
+class PrintfStmt extends Stmt{
+    public ArrayList<Exp> expArrayList;
+
+    public PrintfStmt(){
+        expArrayList = new ArrayList<>();
+    }
+}
+
+class LValStmt extends Stmt{
+    public LVal lVal;
+    public Exp exp;
+    public boolean isGetInt;
+    public boolean isGetChar;
+
+    public LValStmt(){
+        lVal = null;
+        exp = null;
+        isGetInt = false;
+        isGetChar = false;
+    }
+
+    void print1(FileWriter output) throws IOException{
+        output.write("<ForStmt>" + "\n");
+    }
 }
 
 class LVal extends Node{
+    public Exp exp;
+
+    public LVal(){
+        exp = null;
+    }
     @Override
     void print(FileWriter output) throws IOException{
         output.write("<LVal>" + "\n");
@@ -163,6 +230,11 @@ class LVal extends Node{
 }
 
 class Block extends Node{
+    public ArrayList<BlockItem> blockItemArrayList;
+
+    public Block(){
+        blockItemArrayList = new ArrayList<>();
+    }
     @Override
     void print(FileWriter output) throws IOException{
         output.write("<Block>" + "\n");
@@ -170,6 +242,12 @@ class Block extends Node{
 }
 
 class Exp extends Node{
+    public AddExp addExp;
+
+    public Exp(){
+        addExp = null;
+    }
+
     @Override
     void print(FileWriter output) throws IOException{
         output.write("<Exp>" + "\n");
@@ -213,6 +291,16 @@ class MulExp extends Node{
 }
 
 class UnaryExp extends Node{
+    public UnaryExp unaryExp;
+    public PrimaryExp primaryExp;
+    public ArrayList<FuncParam> funcParamArrayList;
+
+    public UnaryExp(){
+        unaryExp = null;
+        primaryExp = null;
+        funcParamArrayList = new ArrayList<>();
+    }
+
     @Override
     void print(FileWriter output) throws IOException{
         output.write("<UnaryExp>" + "\n");
@@ -220,13 +308,42 @@ class UnaryExp extends Node{
 }
 
 class PrimaryExp extends Node{
+    public Exp exp;
+    public LVal lVal;
+    public boolean isNumber;
+    public boolean isChar;
+
+    public PrimaryExp(){
+        exp = null;
+        lVal = null;
+        isNumber = false;
+        isChar = false;
+    }
+
     @Override
     void print(FileWriter output) throws IOException{
         output.write("<PrimaryExp>" + "\n");
     }
 }
 
+class Cond extends Node{
+    public LOrExp lOrExp;
+
+    public Cond(){
+        lOrExp = null;
+    }
+    @Override
+    void print(FileWriter output) throws IOException{
+        output.write("<Cond>" + "\n");
+    }
+}
+
 class RelExp extends Node{
+    public ArrayList<AddExp> addExpArrayList;
+
+    public RelExp(){
+        addExpArrayList = new ArrayList<>();
+    }
     @Override
     void print(FileWriter output) throws IOException{
         output.write("<RelExp>" + "\n");
@@ -234,6 +351,11 @@ class RelExp extends Node{
 }
 
 class EqExp extends Node{
+    public ArrayList<RelExp> relExpArrayList;
+
+    public EqExp(){
+        relExpArrayList = new ArrayList<>();
+    }
     @Override
     void print(FileWriter output) throws IOException{
         output.write("<EqExp>" + "\n");
@@ -241,6 +363,11 @@ class EqExp extends Node{
 }
 
 class LAndExp extends Node{
+    public ArrayList<EqExp> eqExpArrayList;
+
+    public LAndExp(){
+        eqExpArrayList = new ArrayList<>();
+    }
     @Override
     void print(FileWriter output) throws IOException{
         output.write("<LAndExp>" + "\n");
@@ -248,6 +375,11 @@ class LAndExp extends Node{
 }
 
 class LOrExp extends Node{
+    public ArrayList<LAndExp> lAndExpArrayList;
+
+    public LOrExp(){
+        lAndExpArrayList = new ArrayList<>();
+    }
     @Override
     void print(FileWriter output) throws IOException{
         output.write("<LOrExp>" + "\n");

@@ -45,5 +45,6 @@ public class TokenType {
         RBRACK,
         LBRACE,
         RBRACE,
+        END,
     }
 }
