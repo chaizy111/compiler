@@ -1,6 +1,4 @@
-package Analysis;
-
-import java.util.HashSet;
+package Analysis.Token;
 
 public class TokenType {
     public enum tokenType{

@@ -1,10 +1,13 @@
 package Analysis;
 
+import Analysis.Token.Token;
+import Analysis.Token.TokenType;
 import Error.ErrorDealer;
 
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.ArrayList;
 import java.util.HashMap;
 
 public class Lexer {
@@ -16,6 +19,7 @@ public class Lexer {
     private int currentLine;
     private boolean isEnd;
     private ErrorDealer errorDealer;
+    private ArrayList<Token> list;
 
     public Lexer(InputStream file, FileWriter outputfile, ErrorDealer e) {
         this.file = file;
@@ -24,7 +28,8 @@ public class Lexer {
         this.currentToken = null;
         this.currentChar = 0;
         this.currentLine = 0;
-        isEnd = false;
+        this.isEnd = false;
+        this.list = new ArrayList<>();
         initReservedWord();
     }
 
@@ -50,12 +55,12 @@ public class Lexer {
         return currentToken;
     }
 
-    public char getCurrentChar() {
-        return currentChar;
-    }
-
     public int getCurrentLine(){
         return currentLine;
+    }
+
+    public ArrayList<Token> getList() {
+        return list;
     }
 
     public boolean isCurrentCharDigit() {
@@ -87,6 +92,8 @@ public class Lexer {
         passSpace();
         if (isEnd) {
             currentToken = TokenType.tokenType.END;
+            Token t = new Token(currentToken, "", currentLine);
+            if (list.get(list.size() - 1).getType() != TokenType.tokenType.END) list.add(t);
             return; // If we reach the end of program, then stop
         }
         currentToken = null;
@@ -254,9 +261,10 @@ public class Lexer {
         }
         // write token and string into result file
         if (currentToken != null) {
-            outputfile.write(currentToken + " " + s + "\n");
-        } else {
-            next();
+//            outputfile.write(currentToken + " " + s + "\n");
+            Token t = new Token(currentToken, s, currentLine);
+            list.add(t);
         }
+        next();
     }
 }

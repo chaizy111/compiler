@@ -4,35 +4,48 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
 
+import Analysis.Token.Token;
+import Analysis.Token.TokenType;
 import Error.ErrorDealer;
+import Tree.*;
 
 public class Parser {
     private Lexer lexer;
     private FileWriter outputfile;
-    private TokenType.tokenType token;
-    private TokenType.tokenType preRead;
+    private int preIndex;
+    private Token token;
+    private Token preRead;
     private CompUnit compUnit;
+    private ArrayList<Token> list;
     private ErrorDealer error;
 
     public Parser(Lexer lexer, FileWriter outputfile, ErrorDealer e) {
         this.lexer = lexer;
         this.outputfile = outputfile;
+        this.preIndex = 0;
         this.token = null;
         this.preRead = null;
         this.compUnit = null;
+        this.list = null;
         this.error = e;
     }
 
     public void parse() throws IOException{
+        lexer.next();
+        this.list = lexer.getList();
         nextToken();
         nextToken();
         compUnit = parseCompUnit();
     }
 
     private void nextToken() throws IOException {
+        if (token != null && token.getType() != TokenType.tokenType.END) // 一定要在前边输出，这样才符合题目的要求
+            outputfile.write(token.getType() + " " + token.getString() + "\n");
         token = preRead;
-        lexer.next();
-        preRead = lexer.getCurrentToken();
+        preRead = list.get(preIndex);
+        preIndex++;
+        if (preIndex == list.size()) preIndex--; // 这里对index的处理是为了防止index越界，这样可以保证即使没有新的preRead，我们依然能进行nextToken()
+        // 词法分析在这里输出
     }
 
     private CompUnit parseCompUnit() throws IOException {
@@ -43,7 +56,6 @@ public class Parser {
             if(match(token, TokenType.tokenType.CONSTTK)) {
                 c.declArrayList.add(parseConstDecl());
             } else {
-                TokenType.tokenType t = token; // 保存btype类型
                 if(match(preRead, TokenType.tokenType.MAINTK)) {
                     c.mainFuncDef = parseMainFuncDef();
                     break;
@@ -64,7 +76,7 @@ public class Parser {
         // ConstDecl → 'const' BType ConstDef { ',' ConstDef } ';'
         if(match(token, TokenType.tokenType.END)) return null; //读到结束就返回空值
         ConstDecl c = new ConstDecl();
-        c.bType = token;
+        c.bType = token.getType();
         nextToken();
         c.constDefList.add(parseConstDef());
         while (match(token, TokenType.tokenType.COMMA)) { //实现了跳过逗号
@@ -81,7 +93,7 @@ public class Parser {
         if(match(token, TokenType.tokenType.END)) return null; //读到结束就返回空值
         ValDecl v = new ValDecl();
         if (match(token, TokenType.tokenType.INTTK) || match(token, TokenType.tokenType.CHARTK))
-            v.bType = token;
+            v.bType = token.getType();
         while (match(token, TokenType.tokenType.IDENFR)) {
             v.varDefList.add(parseValDef());
             match(token, TokenType.tokenType.COMMA);
@@ -178,7 +190,7 @@ public class Parser {
         if(match(token, TokenType.tokenType.END)) return null; //读到结束就返回空值
         FuncParam f = new FuncParam();
         if(match(token, TokenType.tokenType.CHARTK) || match(token, TokenType.tokenType.INTTK)) {
-            f.bType = token;
+            f.bType = token.getType();
         }
         match(token, TokenType.tokenType.IDENFR);
         if(match(token, TokenType.tokenType.LBRACK)) {
@@ -268,7 +280,7 @@ public class Parser {
         i.print(outputfile);
         return i;
     }
-    
+
     private ForStmt parseForStmt() throws IOException {
         // 'for' '(' [ForStmt] ';' [Cond] ';' [ForStmt] ')' Stmt
         if(match(token, TokenType.tokenType.END)) return null; //读到结束就返回空值
@@ -503,8 +515,8 @@ public class Parser {
         return r;
     }
 
-    private boolean match(TokenType.tokenType actual, TokenType.tokenType aim) throws IOException {
-        if (actual != aim) {
+    private boolean match(Token actual, TokenType.tokenType aim) throws IOException {
+        if (actual.getType() != aim) {
             return false;
         } else {
             nextToken();
