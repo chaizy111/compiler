@@ -5,9 +5,9 @@ import java.io.IOException;
 import java.util.ArrayList;
 
 public class CompUnit extends Node {
-    public ArrayList<Decl> declArrayList;
-    public ArrayList<FuncDef> funcDefArrayList;
-    public MainFuncDef mainFuncDef;
+    private ArrayList<Decl> declArrayList;
+    private ArrayList<FuncDef> funcDefArrayList;
+    private MainFuncDef mainFuncDef;
 
     public CompUnit() {
         declArrayList = new ArrayList<>();
@@ -18,5 +18,17 @@ public class CompUnit extends Node {
     @Override
     public void print(FileWriter output) throws IOException {
         output.write("<CompUnit>" + "\n");
+    }
+
+    public void addDeclArrayList(Decl decl) {
+        this.declArrayList.add(decl);
+    }
+
+    public void addFuncDefArrayList(FuncDef funcDef) {
+        this.funcDefArrayList.add(funcDef);
+    }
+
+    public void setMainFuncDef(MainFuncDef mainFuncDef) {
+        this.mainFuncDef = mainFuncDef;
     }
 }

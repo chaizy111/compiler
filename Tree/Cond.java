@@ -4,7 +4,7 @@ import java.io.FileWriter;
 import java.io.IOException;
 
 public class Cond extends Node {
-    public LOrExp lOrExp;
+    private LOrExp lOrExp;
 
     public Cond() {
         lOrExp = null;
@@ -13,5 +13,9 @@ public class Cond extends Node {
     @Override
     public void print(FileWriter output) throws IOException {
         output.write("<Cond>" + "\n");
+    }
+
+    public void setlOrExp(LOrExp lOrExp) {
+        this.lOrExp = lOrExp;
     }
 }

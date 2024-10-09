@@ -4,7 +4,7 @@ import java.io.FileWriter;
 import java.io.IOException;
 
 public class ConstExp extends Node {
-    public AddExp addExp;
+    private AddExp addExp;
 
     public ConstExp() {
         addExp = null;
@@ -13,5 +13,9 @@ public class ConstExp extends Node {
     @Override
     public void print(FileWriter output) throws IOException {
         output.write("<ConstExp>" + "\n");
+    }
+
+    public void setAddExp(AddExp addExp) {
+        this.addExp = addExp;
     }
 }

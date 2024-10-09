@@ -5,7 +5,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 
 public class EqExp extends Node {
-    public ArrayList<RelExp> relExpArrayList;
+    private ArrayList<RelExp> relExpArrayList;
 
     public EqExp() {
         relExpArrayList = new ArrayList<>();
@@ -14,5 +14,9 @@ public class EqExp extends Node {
     @Override
     public void print(FileWriter output) throws IOException {
         output.write("<EqExp>" + "\n");
+    }
+
+    public void addRelExpArrayList(RelExp relExp) {
+        this.relExpArrayList.add(relExp);
     }
 }

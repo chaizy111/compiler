@@ -1,15 +1,31 @@
 package Tree;
 
 public class ForStmt extends Stmt {
-    public LValStmt l1;
-    public LValStmt l2;
-    public Cond c;
-    public Stmt s;
+    private LValStmt l1;
+    private LValStmt l2;
+    private Cond c;
+    private Stmt s;
 
     public ForStmt() {
         l1 = null;
         l2 = null;
         c = null;
         s = null;
+    }
+
+    public void setL1(LValStmt l1) {
+        this.l1 = l1;
+    }
+
+    public void setL2(LValStmt l2) {
+        this.l2 = l2;
+    }
+
+    public void setC(Cond c) {
+        this.c = c;
+    }
+
+    public void setS(Stmt s) {
+        this.s = s;
     }
 }

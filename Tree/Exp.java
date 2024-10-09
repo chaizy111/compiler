@@ -4,7 +4,7 @@ import java.io.FileWriter;
 import java.io.IOException;
 
 public class Exp extends Node {
-    public AddExp addExp;
+    private AddExp addExp;
 
     public Exp() {
         addExp = null;
@@ -13,5 +13,9 @@ public class Exp extends Node {
     @Override
     public void print(FileWriter output) throws IOException {
         output.write("<Exp>" + "\n");
+    }
+
+    public void setAddExp(AddExp addExp) {
+        this.addExp = addExp;
     }
 }

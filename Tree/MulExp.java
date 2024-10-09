@@ -15,4 +15,8 @@ public class MulExp extends Node {
     public void print(FileWriter output) throws IOException {
         output.write("<MulExp>" + "\n");
     }
+
+    public void addUnaryExpArrayList(UnaryExp unaryExp) {
+        this.unaryExpArrayList.add(unaryExp);
+    }
 }

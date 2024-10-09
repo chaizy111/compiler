@@ -7,8 +7,8 @@ import java.io.IOException;
 import java.util.ArrayList;
 
 public class ConstDecl extends Decl {
-    public TokenType.tokenType bType;
-    public ArrayList<ConstDef> constDefList;
+    private TokenType.tokenType bType;
+    private ArrayList<ConstDef> constDefList;
 
     public ConstDecl() {
         bType = null;
@@ -18,5 +18,13 @@ public class ConstDecl extends Decl {
     @Override
     public void print(FileWriter output) throws IOException {
         output.write("<ConstDecl>" + "\n");
+    }
+
+    public void setbType(TokenType.tokenType bType) {
+        this.bType = bType;
+    }
+
+    public void addConstDefList(ConstDef constDef) {
+        this.constDefList.add(constDef);
     }
 }

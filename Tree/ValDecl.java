@@ -7,8 +7,8 @@ import java.io.IOException;
 import java.util.ArrayList;
 
 public class ValDecl extends Decl {
-    public TokenType.tokenType bType;
-    public ArrayList<ValDef> varDefList;
+    private TokenType.tokenType bType;
+    private ArrayList<ValDef> varDefList;
 
     public ValDecl() {
         bType = null;
@@ -18,5 +18,13 @@ public class ValDecl extends Decl {
     @Override
     public void print(FileWriter output) throws IOException {
         output.write("<VarDecl>" + "\n");
+    }
+
+    public void setbType(TokenType.tokenType bType) {
+        this.bType = bType;
+    }
+
+    public void addVarDefList(ValDef valDef) {
+        this.varDefList.add(valDef);
     }
 }

@@ -6,8 +6,8 @@ import java.io.FileWriter;
 import java.io.IOException;
 
 public class FuncParam extends Node {
-    public boolean isArray;
-    public TokenType.tokenType bType;
+    private boolean isArray;
+    private TokenType.tokenType bType;
 
     public FuncParam() {
         isArray = false;
@@ -17,5 +17,13 @@ public class FuncParam extends Node {
     @Override
     public void print(FileWriter output) throws IOException {
         output.write("<FuncParam>" + "\n");
+    }
+
+    public void setIsArray(boolean isArray) {
+        this.isArray = isArray;
+    }
+
+    public void setbType(TokenType.tokenType bType) {
+        this.bType = bType;
     }
 }
