@@ -8,6 +8,8 @@ import Analysis.Token.Token;
 import Analysis.Token.TokenType;
 import Error.ErrorDealer;
 import Tree.*;
+import Tree.Character;
+import Tree.Number;
 
 public class Parser {
     private Lexer lexer;
@@ -109,12 +111,11 @@ public class Parser {
         if(match(token, TokenType.tokenType.END)) return null; //读到结束就返回空值
         ConstDef c = new ConstDef();
         match(token, TokenType.tokenType.IDENFR);
-        match(token, TokenType.tokenType.LBRACK);
-        //TODO
-        ///////////////////////////////////////////这里会直接分析到底最后会输出<LVal>，所以要加一个判断
-        c.setConstExp(parseConstExp());
-        int nowLine = lexer.getCurrentLine(); // 错误处理
-        if(!match(token, TokenType.tokenType.RBRACK)) error.errorK(nowLine + 1);
+        if(match(token, TokenType.tokenType.LBRACK)) {
+            c.setConstExp(parseConstExp());
+            int nowLine = lexer.getCurrentLine(); // 错误处理
+            if(!match(token, TokenType.tokenType.RBRACK)) error.errorK(nowLine + 1);
+        }
         match(token, TokenType.tokenType.ASSIGN);
         c.setConstInitVal(parseConstInitVal());
         c.print(outputfile);
@@ -243,7 +244,7 @@ public class Parser {
         if (match(token, TokenType.tokenType.IFTK)) {
             return parseIfStmt();
         } else if (match(token, TokenType.tokenType.FORTK)) {
-            return parseForStmt();
+            return parseFor();
         } else if (match(token, TokenType.tokenType.BREAKTK) || match(token, TokenType.tokenType.CONTINUETK)) {
             int nowLine = lexer.getCurrentLine(); // 错误处理
             if(!match(token, TokenType.tokenType.SEMICN)) error.errorI(nowLine + 1);
@@ -285,7 +286,7 @@ public class Parser {
         return i;
     }
 
-    private For parseForStmt() throws IOException {
+    private For parseFor() throws IOException {
         // 'for' '(' [ForStmt] ';' [Cond] ';' [ForStmt] ')' Stmt
         if(match(token, TokenType.tokenType.END)) return null; //读到结束就返回空值
         For f = new For();
@@ -522,6 +523,90 @@ public class Parser {
                 || match(token, TokenType.tokenType.GRE) || match(token, TokenType.tokenType.GEQ));
         r.print(outputfile);
         return r;
+    }
+
+    public Character parseCharacter() throws IOException { //TODO
+        if(match(token, TokenType.tokenType.END)) return null; //读到结束就返回空值
+        Character c = new Character();
+        if (match(token, TokenType.tokenType.CHARTK)) {
+            c.setToken(token);
+            c.print(outputfile);
+        }
+        return c;
+    }
+
+    public ForStmt parseForStmt() throws IOException { //TODO
+        if(match(token, TokenType.tokenType.END)) return null; //读到结束就返回空值
+        ForStmt f = new ForStmt();
+        f.print(outputfile);
+        return f;
+    }
+
+    public FuncFParams parseFuncFParams() throws IOException { // TODO
+        if(match(token, TokenType.tokenType.END)) return null; //读到结束就返回空值
+        FuncFParams f = new FuncFParams();
+        f.print(outputfile);
+        return f;
+    }
+
+    public FuncRParams parseFuncRParams() throws IOException { //TODO
+        if(match(token, TokenType.tokenType.END)) return null; //读到结束就返回空值
+        FuncRParams f = new FuncRParams();
+        f.print(outputfile);
+        return f;
+    }
+
+    public FuncType parseFuncType() throws IOException { //TODO
+        if(match(token, TokenType.tokenType.END)) return null; //读到结束就返回空值
+        FuncType f = new FuncType();
+        if(match(token, TokenType.tokenType.VOIDTK)
+                || match(token, TokenType.tokenType.INTTK)
+                || match(token, TokenType.tokenType.CHARTK)) {
+            f.setToken(list.get(list.indexOf(token) - 1));
+            f.print(outputfile);
+        }
+        return f;
+    }
+
+    public InitVal parseInitVal() throws IOException { //TODO
+        if(match(token, TokenType.tokenType.END)) return null; //读到结束就返回空值
+        InitVal i = new InitVal();
+        if(match(token, TokenType.tokenType.LBRACE)) {
+            do{
+                i.addExpArrayList(parseExp());
+            } while (match(token, TokenType.tokenType.COMMA));
+            match(token, TokenType.tokenType.RBRACE);
+            i.print(outputfile);
+        } else if (match(token, TokenType.tokenType.STRCON)) {
+            i.setToken(list.get(list.indexOf(token) - 1));
+            i.print(outputfile);
+        } else {
+            i.setExp(parseExp());
+            i.print(outputfile);
+        }
+        return i;
+    }
+
+    public Number parseNumber() throws IOException { // TODO
+        if(match(token, TokenType.tokenType.END)) return null; //读到结束就返回空值
+        Number n = new Number();
+        if (match(token, TokenType.tokenType.INTTK)) {
+            n.setToken(token);
+            n.print(outputfile);
+        }
+        return n;
+    }
+
+    public UnaryOp parseUnaryOp() throws IOException { //TODO
+        if(match(token, TokenType.tokenType.END)) return null; //读到结束就返回空值
+        UnaryOp u = new UnaryOp();
+        if(match(token, TokenType.tokenType.PLUS)
+                || match(token, TokenType.tokenType.MINU)
+                || match(token, TokenType.tokenType.NOT)) {
+            u.setToken(list.get(list.indexOf(token) - 1));
+            u.print(outputfile);
+        }
+        return u;
     }
 
     private boolean isLValStmt() { // 四个Token以内有assign就是LValStmt
