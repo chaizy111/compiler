@@ -7,7 +7,7 @@ import java.util.ArrayList;
 public class UnaryExp extends Node {
     private UnaryExp unaryExp;
     private PrimaryExp primaryExp;
-    private ArrayList<FuncParam> funcParamArrayList;
+    private ArrayList<Exp> funcParamArrayList;
 
     public UnaryExp() {
         unaryExp = null;
@@ -28,7 +28,7 @@ public class UnaryExp extends Node {
         this.primaryExp = primaryExp;
     }
 
-    public void setFuncParamArrayList(ArrayList<FuncParam> funcParamArrayList) {
+    public void setFuncParamArrayList(ArrayList<Exp> funcParamArrayList) {
         this.funcParamArrayList = funcParamArrayList;
     }
 }

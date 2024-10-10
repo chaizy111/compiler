@@ -18,4 +18,8 @@ public class Exp extends Node {
     public void setAddExp(AddExp addExp) {
         this.addExp = addExp;
     }
+
+    public AddExp getAddExp() {
+        return addExp;
+    }
 }

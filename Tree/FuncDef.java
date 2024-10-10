@@ -5,11 +5,11 @@ import java.io.IOException;
 import java.util.ArrayList;
 
 public class FuncDef extends Node {
-    private ArrayList<FuncParam> funcParamList;
+    private ArrayList<FuncFParam> funcFParamList;
     private Block block;
 
     public FuncDef() {
-        funcParamList = null;
+        funcFParamList = null;
         block = null;
     }
 
@@ -18,8 +18,8 @@ public class FuncDef extends Node {
         output.write("<FuncDef>" + "\n");
     }
 
-    public void setFuncParamList(ArrayList<FuncParam> funcParamList) {
-        this.funcParamList = funcParamList;
+    public void setFuncParamList(ArrayList<FuncFParam> funcFParamList) {
+        this.funcFParamList = funcFParamList;
     }
 
     public void setBlock(Block block) {

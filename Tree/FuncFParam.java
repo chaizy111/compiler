@@ -5,11 +5,11 @@ import Analysis.Token.TokenType;
 import java.io.FileWriter;
 import java.io.IOException;
 
-public class FuncParam extends Node {
+public class FuncFParam extends Node {
     private boolean isArray;
     private TokenType.tokenType bType;
 
-    public FuncParam() {
+    public FuncFParam() {
         isArray = false;
         bType = null;
     }
