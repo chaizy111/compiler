@@ -49,7 +49,7 @@ public class Parser {
         preIndex++;
         if (preIndex == list.size()) preIndex--; // 这里对index的处理是为了防止index越界，这样可以保证即使没有新的preRead，我们依然能进行nextToken()
     }
-    //TODO ：2：增加或更改判断条件，防止多输出或少输出，多写一些is方法，让判断逻辑独立出来
+
     private CompUnit parseCompUnit() throws IOException {
         // CompUnit → {Decl} {FuncDef} MainFuncDef
         if(match(token, TokenType.tokenType.END)) return null; //读到结束就返回空值
@@ -343,7 +343,7 @@ public class Parser {
         return i;
     }
 
-    private For parseFor() throws IOException { //TODO 修改逻辑
+    private For parseFor() throws IOException {
         // 'for' '(' [ForStmt] ';' [Cond] ';' [ForStmt] ')' Stmt
         if(match(token, TokenType.tokenType.END)) return null; //读到结束就返回空值
         For f = new For();
@@ -582,7 +582,7 @@ public class Parser {
         return e;
     }
 
-    private RelExp parseRelExp() throws IOException { // TODO 实现符号的存储，便于后边的语义分析
+    private RelExp parseRelExp() throws IOException {
         // RelExp → AddExp | RelExp ('<' | '>' | '<=' | '>=') AddExp
         if(match(token, TokenType.tokenType.END)) return null; //读到结束就返回空值
         RelExp r = new RelExp();
