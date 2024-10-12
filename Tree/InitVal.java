@@ -10,12 +10,12 @@ public class InitVal extends Node {
     // InitVal → Exp | '{' [ Exp { ',' Exp } ] '}' | StringConst
     private Exp exp;
     private ArrayList<Exp> expArrayList;
-    private Token token;
+    private Token stringConst;
 
     public InitVal() {
         this.exp = null;
         this.expArrayList = new ArrayList<>();
-        this.token = null;
+        this.stringConst = null;
     }
 
     @Override
@@ -31,8 +31,8 @@ public class InitVal extends Node {
         return expArrayList;
     }
 
-    public Token getToken() {
-        return token;
+    public Token getStringConst() {
+        return stringConst;
     }
 
     public void setExp(Exp exp) {
@@ -43,8 +43,8 @@ public class InitVal extends Node {
         this.expArrayList = expArrayList;
     }
 
-    public void setToken(Token token) {
-        this.token = token;
+    public void setStringConst(Token stringConst) {
+        this.stringConst = stringConst;
     }
 
     public void addExpArrayList(Exp exp) {

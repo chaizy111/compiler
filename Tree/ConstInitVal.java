@@ -1,16 +1,20 @@
 package Tree;
 
+import Analysis.Token.Token;
+
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
 
 public class ConstInitVal extends Node {
-    private String string;
+    private ConstExp constExp;
+    private Token stringConst;
     private ArrayList<ConstExp> constExpArrayList;
 
     public ConstInitVal() {
-        string = "";
-        constExpArrayList = new ArrayList<>();
+        this.constExp = null;
+        this.stringConst = null;
+        this.constExpArrayList = new ArrayList<>();
     }
 
     @Override
@@ -18,8 +22,12 @@ public class ConstInitVal extends Node {
         output.write("<ConstInitVal>" + "\n");
     }
 
-    public void setString(String string) {
-        this.string = string;
+    public void setConstExp(ConstExp constExp) {
+        this.constExp = constExp;
+    }
+
+    public void setStringConst(Token stringConst) {
+        this.stringConst = stringConst;
     }
 
     public void addConstExpArrayList(ConstExp constExp) {

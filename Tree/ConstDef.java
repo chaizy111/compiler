@@ -1,20 +1,28 @@
 package Tree;
 
+import Analysis.Token.Token;
+
 import java.io.FileWriter;
 import java.io.IOException;
 
 public class ConstDef extends Node {
+    private Token ident;
     private ConstExp constExp;
     private ConstInitVal constInitVal;
 
     public ConstDef() {
-        constExp = null;
-        constInitVal = null;
+        this.ident = null;
+        this.constExp = null;
+        this.constInitVal = null;
     }
 
     @Override
     public void print(FileWriter output) throws IOException {
         output.write("<ConstDef>" + "\n");
+    }
+
+    public void setIdent(Token ident) {
+        this.ident = ident;
     }
 
     public void setConstExp(ConstExp constExp) {
