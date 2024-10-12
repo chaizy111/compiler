@@ -27,7 +27,7 @@ public class Lexer {
         this.errorDealer = e;
         this.currentToken = null;
         this.currentChar = 0;
-        this.currentLine = 0;
+        this.currentLine = 1;
         this.isEnd = false;
         this.list = new ArrayList<>();
         initReservedWord();
@@ -94,6 +94,7 @@ public class Lexer {
             currentToken = TokenType.tokenType.END;
             Token t = new Token(currentToken, "", currentLine);
             if (list.get(list.size() - 1).getType() != TokenType.tokenType.END) list.add(t);
+            errorDealer.setMaxLine(currentLine);
             return; // If we reach the end of program, then stop
         }
         currentToken = null;
@@ -167,7 +168,7 @@ public class Lexer {
             } else {
                 s = s.concat("&"); //correct the wrong place
                 file.reset();
-                errorDealer.errorA(currentLine + 1);
+                errorDealer.errorA(currentLine);
             }
         } else if (currentChar == '|') { // Judge ||
             getchar();
@@ -177,7 +178,7 @@ public class Lexer {
             } else {
                 s = s.concat("|"); //correct the wrong place;
                 file.reset();
-                errorDealer.errorA(currentLine + 1);
+                errorDealer.errorA(currentLine);
             }
         } else if (currentChar == '+') { // Judge +
             currentToken = TokenType.tokenType.PLUS;
@@ -203,6 +204,8 @@ public class Lexer {
                         getchar();
                         if (currentChar == '/') {
                             break;
+                        } else {
+                            file.reset();
                         }
                     }
                     if (currentChar == '\n') {
@@ -266,5 +269,12 @@ public class Lexer {
             list.add(t);
         }
         next();
+    }
+
+    public void printToken() throws IOException {
+        for (Token t:list) {
+            if(t.getType() == TokenType.tokenType.END) break;
+            outputfile.write(t.getType() + " " + t.getString() + "\n");
+        }
     }
 }

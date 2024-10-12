@@ -41,15 +41,15 @@ public class Parser {
     }
 
     private void nextToken() throws IOException {
+        // 词法分析在这里输出
         if (token != null && token.getType() != TokenType.tokenType.END) // 一定要在前边输出，这样才符合题目的要求
             outputfile.write(token.getType() + " " + token.getString() + "\n");
         token = preRead;
         preRead = list.get(preIndex);
         preIndex++;
         if (preIndex == list.size()) preIndex--; // 这里对index的处理是为了防止index越界，这样可以保证即使没有新的preRead，我们依然能进行nextToken()
-        // 词法分析在这里输出
     }
-    //TODO ：2：增加或更改判断条件，防止多输出或少输出，多写一些is方法，让判断逻辑独立出来 3： 修改error的判断，这里仍有大的逻辑错误
+    //TODO ：2：增加或更改判断条件，防止多输出或少输出，多写一些is方法，让判断逻辑独立出来
     private CompUnit parseCompUnit() throws IOException {
         // CompUnit → {Decl} {FuncDef} MainFuncDef
         if(match(token, TokenType.tokenType.END)) return null; //读到结束就返回空值
@@ -78,13 +78,14 @@ public class Parser {
         if(match(token, TokenType.tokenType.END)) return null; //读到结束就返回空值
         ConstDecl c = new ConstDecl();
         c.setbType(token.getType());
-        nextToken();
-        c.addConstDefList(parseConstDef());
+        if(match(token, TokenType.tokenType.INTTK) || match(token, TokenType.tokenType.CHARTK)) {
+            c.addConstDefList(parseConstDef());
+        }
         while (match(token, TokenType.tokenType.COMMA)) { //实现了跳过逗号
             c.addConstDefList(parseConstDef());
         }
-        int nowLine = lexer.getCurrentLine(); // 错误处理
-        if(!match(token, TokenType.tokenType.SEMICN)) error.errorI(nowLine + 1);
+        if(!match(token, TokenType.tokenType.SEMICN)) // 错误处理
+            error.errorI(list.get(list.indexOf(token) - 1).getLine());
         c.print(outputfile);
         return c;
     }
@@ -99,8 +100,8 @@ public class Parser {
             v.addVarDefList(parseValDef());
             match(token, TokenType.tokenType.COMMA);
         }
-        int nowLine = lexer.getCurrentLine(); // 错误处理
-        if(!match(token, TokenType.tokenType.SEMICN)) error.errorI(nowLine + 1);
+        if(!match(token, TokenType.tokenType.SEMICN)) // 错误处理
+            error.errorI(list.get(list.indexOf(token) - 1).getLine());
         v.print(outputfile);
         return v;
     }
@@ -112,8 +113,8 @@ public class Parser {
         match(token, TokenType.tokenType.IDENFR);
         if(match(token, TokenType.tokenType.LBRACK)) {
             c.setConstExp(parseConstExp());
-            int nowLine = lexer.getCurrentLine(); // 错误处理
-            if(!match(token, TokenType.tokenType.RBRACK)) error.errorK(nowLine + 1);
+            if(!match(token, TokenType.tokenType.RBRACK)) // 错误处理
+                error.errorK(list.get(list.indexOf(token) - 1).getLine());
         }
         match(token, TokenType.tokenType.ASSIGN);
         c.setConstInitVal(parseConstInitVal());
@@ -128,8 +129,8 @@ public class Parser {
         match(token, TokenType.tokenType.IDENFR);
         if(match(token, TokenType.tokenType.LBRACK)) {
             v.setConstExp(parseConstExp());
-            int nowLine = lexer.getCurrentLine(); // 错误处理
-            if (!match(token, TokenType.tokenType.RBRACK)) error.errorK(nowLine + 1);
+            if(!match(token, TokenType.tokenType.RBRACK)) // 错误处理
+                error.errorK(list.get(list.indexOf(token) - 1).getLine());
         }
         if(match(token, TokenType.tokenType.ASSIGN)) {
             v.setInitVal(parseInitVal());
@@ -168,8 +169,8 @@ public class Parser {
         }
         if(match(token, TokenType.tokenType.LPARENT)) {
             f.setFuncFParams(parseFuncFParams());
-            int nowLine = lexer.getCurrentLine(); // 错误处理
-            if(!match(token, TokenType.tokenType.RPARENT)) error.errorJ(nowLine + 1);
+            if(!match(token, TokenType.tokenType.RPARENT)) // 错误处理
+                error.errorJ(list.get(list.indexOf(token) - 1).getLine());
         }
         if(isBlock()) f.setBlock(parseBlock());
         f.print(outputfile);
@@ -182,8 +183,8 @@ public class Parser {
         MainFuncDef m = new MainFuncDef();
         match(token, TokenType.tokenType.MAINTK);
         match(token, TokenType.tokenType.LPARENT);
-        int nowLine = lexer.getCurrentLine(); // 错误处理
-        if(!match(token, TokenType.tokenType.RPARENT)) error.errorJ(nowLine + 1);
+        if(!match(token, TokenType.tokenType.RPARENT)) // 错误处理
+            error.errorJ(list.get(list.indexOf(token) - 1).getLine());
         if(isBlock()) m.setBlock(parseBlock());
         m.print(outputfile);
         return m;
@@ -221,8 +222,8 @@ public class Parser {
         }
         if(match(token, TokenType.tokenType.LBRACK)) {
             f.setIsArray(true);
-            int nowLine = lexer.getCurrentLine(); // 错误处理
-            if(!match(token, TokenType.tokenType.RBRACK)) error.errorK(nowLine + 1);
+            if(!match(token, TokenType.tokenType.RBRACK)) // 错误处理
+                error.errorK(list.get(list.indexOf(token) - 1).getLine());
         }
         f.print(outputfile);
         return f;
@@ -269,8 +270,8 @@ public class Parser {
         } else if (match(token, TokenType.tokenType.FORTK)) {
             return parseFor();
         } else if (match(token, TokenType.tokenType.BREAKTK) || match(token, TokenType.tokenType.CONTINUETK)) {
-            int nowLine = lexer.getCurrentLine(); // 错误处理
-            if(!match(token, TokenType.tokenType.SEMICN)) error.errorI(nowLine + 1);
+            if(!match(token, TokenType.tokenType.SEMICN)) // 错误处理
+                error.errorI(list.get(list.indexOf(token) - 1).getLine());
             Stmt s = new Stmt();
             s.print(outputfile);
             return s;
@@ -290,8 +291,8 @@ public class Parser {
             if(isExp()) {
                 s.setE(parseExp());
             }
-            int nowLine = lexer.getCurrentLine(); // 错误处理
-            if(!match(token, TokenType.tokenType.SEMICN)) error.errorI(nowLine + 1);
+            if(!match(token, TokenType.tokenType.SEMICN)) // 错误处理
+                error.errorI(list.get(list.indexOf(token) - 1).getLine());
             s.print(outputfile);
             return s;
         }
@@ -303,8 +304,8 @@ public class Parser {
         IfStmt i = new IfStmt();
         match(token, TokenType.tokenType.LPARENT);
         i.setC(parseCond());
-        int nowLine = lexer.getCurrentLine(); // 错误处理
-        if(!match(token, TokenType.tokenType.RPARENT)) error.errorJ(nowLine + 1);
+        if(!match(token, TokenType.tokenType.RPARENT)) // 错误处理
+            error.errorJ(list.get(list.indexOf(token) - 1).getLine());
         i.setS1(parseStmt());
         if(match(token, TokenType.tokenType.ELSETK)) i.setS2(parseStmt());
         i.print(outputfile);
@@ -338,8 +339,8 @@ public class Parser {
         if(match(token, TokenType.tokenType.END)) return null; //读到结束就返回空值
         ReturnStmt r = new ReturnStmt();
         if (isExp()) r.setExp(parseExp());
-        int nowLine = lexer.getCurrentLine(); // 错误处理
-        if(!match(token, TokenType.tokenType.SEMICN)) error.errorI(nowLine + 1);
+        if(!match(token, TokenType.tokenType.SEMICN)) // 错误处理
+            error.errorI(list.get(list.indexOf(token) - 1).getLine());
         r.print(outputfile);
         return r;
     }
@@ -353,9 +354,10 @@ public class Parser {
         while (match(token, TokenType.tokenType.COMMA)) {
             p.addExpArrayLsit(parseExp());
         }
-        int nowLine = lexer.getCurrentLine(); // 错误处理
-        if(!match(token, TokenType.tokenType.RPARENT)) error.errorJ(nowLine + 1);
-        if(!match(token, TokenType.tokenType.SEMICN)) error.errorI(nowLine + 1);
+        if(!match(token, TokenType.tokenType.RPARENT)) // 错误处理
+            error.errorJ(list.get(list.indexOf(token) - 1).getLine());
+        if(!match(token, TokenType.tokenType.SEMICN)) // 错误处理
+            error.errorI(list.get(list.indexOf(token) - 1).getLine());
         p.print(outputfile);
         return p;
     }
@@ -371,21 +373,21 @@ public class Parser {
         if(match(token, TokenType.tokenType.GETINTTK)) {
             l.setIsGetInt(true);
             match(token, TokenType.tokenType.LPARENT);
-            int nowLine = lexer.getCurrentLine(); // 错误处理
-            if(!match(token, TokenType.tokenType.RPARENT)) error.errorJ(nowLine + 1);
+            if(!match(token, TokenType.tokenType.RPARENT)) // 错误处理
+                error.errorJ(list.get(list.indexOf(token) - 1).getLine());
         } else if (match(token, TokenType.tokenType.GETCHARTK)) {
             l.setIsGetChar(true);
             match(token, TokenType.tokenType.LPARENT);
-            int nowLine = lexer.getCurrentLine(); // 错误处理
-            if(!match(token, TokenType.tokenType.RPARENT)) error.errorJ(nowLine + 1);
+            if(!match(token, TokenType.tokenType.RPARENT)) // 错误处理
+                error.errorJ(list.get(list.indexOf(token) - 1).getLine());
         } else {
             l.setExp(parseExp());
         }
         if(kind == 2) {
             l.print1(outputfile);
         }
-        int nowLine = lexer.getCurrentLine(); // 错误处理
-        if(kind != 2 && !match(token, TokenType.tokenType.SEMICN)) error.errorI(nowLine + 1);
+        if(kind != 2 && !match(token, TokenType.tokenType.SEMICN)) // 错误处理
+            error.errorI(list.get(list.indexOf(token) - 1).getLine());
         if(kind == 1) {
             l.print(outputfile);
         }
@@ -400,8 +402,8 @@ public class Parser {
         match(token, TokenType.tokenType.IDENFR);
         if(match(token, TokenType.tokenType.LBRACK)) {
             l.setExp(parseExp());
-            int nowLine = lexer.getCurrentLine(); // 错误处理
-            if(!match(token, TokenType.tokenType.RBRACK)) error.errorK(nowLine + 1);
+            if(!match(token, TokenType.tokenType.RBRACK)) // 错误处理
+                error.errorK(list.get(list.indexOf(token) - 1).getLine());
         }
         l.print(outputfile);
         return l;
@@ -458,8 +460,8 @@ public class Parser {
             u.setIdent(list.get(list.indexOf(token) - 1));
             if(match(token, TokenType.tokenType.LPARENT)) {
                 if (isFuncRParams()) u.setFuncRParams(parseFuncRParams());
-                int nowLine = lexer.getCurrentLine(); // 错误处理
-                if (!match(token, TokenType.tokenType.RPARENT)) error.errorJ(nowLine + 1);
+                if(!match(token, TokenType.tokenType.RPARENT)) // 错误处理
+                    error.errorJ(list.get(list.indexOf(token) - 1).getLine());
             }
         } else if (isUnaryOp()) {
             u.setUnaryOp(parseUnaryOp());
@@ -477,8 +479,8 @@ public class Parser {
         PrimaryExp p = new PrimaryExp();
         if(match(token, TokenType.tokenType.LPARENT)) {
             p.setExp(parseExp());
-            int nowLine = lexer.getCurrentLine(); // 错误处理
-            if(!match(token, TokenType.tokenType.RPARENT)) error.errorJ(nowLine + 1);
+            if(!match(token, TokenType.tokenType.RPARENT)) // 错误处理
+                error.errorJ(list.get(list.indexOf(token) - 1).getLine());
         } else if(match(token, TokenType.tokenType.IDENFR)) {
             p.setlVal(parseLVal());
         } else if (isNumber()) {
@@ -545,6 +547,7 @@ public class Parser {
     }
 
     public Character parseCharacter() throws IOException {
+        // Character → CharConst
         if(match(token, TokenType.tokenType.END)) return null; //读到结束就返回空值
         Character c = new Character();
         if (match(token, TokenType.tokenType.CHRCON)) {
@@ -561,11 +564,12 @@ public class Parser {
         return f;
     }
 
-    public FuncFParams parseFuncFParams() throws IOException { // TODO
+    public FuncFParams parseFuncFParams() throws IOException {
+        //FuncFParams → FuncFParam { ',' FuncFParam }
         if(match(token, TokenType.tokenType.END)) return null; //读到结束就返回空值
         FuncFParams f = new FuncFParams();
         ArrayList<FuncFParam> list = new ArrayList<>();
-        if(!match(preRead, TokenType.tokenType.RPARENT) && !match(preRead, TokenType.tokenType.LBRACE)) {
+        if(isFuncParam()) {
             // 有无参数的情况
             do{
                 list.add(parseFuncFParam());
@@ -576,7 +580,8 @@ public class Parser {
         return f;
     }
 
-    public FuncRParams parseFuncRParams() throws IOException { //TODO
+    public FuncRParams parseFuncRParams() throws IOException {
+        // FuncRParams → Exp { ',' Exp }
         if(match(token, TokenType.tokenType.END)) return null; //读到结束就返回空值
         FuncRParams f = new FuncRParams();
         ArrayList<Exp> list = new ArrayList<>();
@@ -589,6 +594,7 @@ public class Parser {
     }
 
     public FuncType parseFuncType() throws IOException {
+        // FuncType → 'void' | 'int' | 'char'
         if(match(token, TokenType.tokenType.END)) return null; //读到结束就返回空值
         FuncType f = new FuncType();
         if(match(token, TokenType.tokenType.VOIDTK)
@@ -601,6 +607,7 @@ public class Parser {
     }
 
     public Number parseNumber() throws IOException {
+        //  IntConst
         if(match(token, TokenType.tokenType.END)) return null; //读到结束就返回空值
         Number n = new Number();
         if (match(token, TokenType.tokenType.INTCON)) {
@@ -610,7 +617,8 @@ public class Parser {
         return n;
     }
 
-    public UnaryOp parseUnaryOp() throws IOException { //TODO
+    public UnaryOp parseUnaryOp() throws IOException {
+        // UnaryOp → '+' | '−' | '!'
         if(match(token, TokenType.tokenType.END)) return null; //读到结束就返回空值
         UnaryOp u = new UnaryOp();
         if(match(token, TokenType.tokenType.PLUS)
@@ -631,6 +639,12 @@ public class Parser {
         return isFuncType()
                 && list.get(index + 1).getType() == TokenType.tokenType.IDENFR
                 && list.get(index + 2).getType() == TokenType.tokenType.LPARENT;
+    }
+
+    private boolean isFuncParam() {
+        int index = list.indexOf(token);
+        return list.get(index + 1).getType() != TokenType.tokenType.RPARENT
+                && list.get(index + 1).getType() != TokenType.tokenType.LBRACE;
     }
 
     private boolean isFuncType() {
