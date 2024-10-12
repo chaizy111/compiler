@@ -1,5 +1,6 @@
 package Tree;
 
+import Analysis.Token.Token;
 import Analysis.Token.TokenType;
 
 import java.io.FileWriter;
@@ -8,15 +9,17 @@ import java.io.IOException;
 public class FuncFParam extends Node {
     private boolean isArray;
     private TokenType.tokenType bType;
+    private Token ident;
 
     public FuncFParam() {
-        isArray = false;
-        bType = null;
+        this.isArray = false;
+        this.bType = null;
+        this.ident = null;
     }
 
     @Override
     public void print(FileWriter output) throws IOException {
-        output.write("<FuncParam>" + "\n");
+        output.write("<FuncFParam>" + "\n");
     }
 
     public void setIsArray(boolean isArray) {
@@ -25,5 +28,9 @@ public class FuncFParam extends Node {
 
     public void setbType(TokenType.tokenType bType) {
         this.bType = bType;
+    }
+
+    public void setIdent(Token ident) {
+        this.ident = ident;
     }
 }

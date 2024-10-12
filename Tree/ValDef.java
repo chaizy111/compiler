@@ -5,11 +5,11 @@ import java.io.IOException;
 
 public class ValDef extends Node {
     private ConstExp constExp;
-    private ConstInitVal constInitVal;
+    private InitVal initVal;
 
     public ValDef() {
         constExp = null;
-        constInitVal = null;
+        initVal = null;
     }
 
     @Override
@@ -21,7 +21,7 @@ public class ValDef extends Node {
         this.constExp = constExp;
     }
 
-    public void setConstInitVal(ConstInitVal constInitVal) {
-        this.constInitVal = constInitVal;
+    public void setInitVal(InitVal initVal) {
+        this.initVal = initVal;
     }
 }

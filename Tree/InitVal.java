@@ -11,6 +11,13 @@ public class InitVal extends Node {
     private Exp exp;
     private ArrayList<Exp> expArrayList;
     private Token token;
+
+    public InitVal() {
+        this.exp = null;
+        this.expArrayList = new ArrayList<>();
+        this.token = null;
+    }
+
     @Override
     public void print(FileWriter output) throws IOException {
         output.write("<InitVal>" + "\n");

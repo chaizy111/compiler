@@ -1,19 +1,21 @@
 package Tree;
 
+import Analysis.Token.Token;
+
 import java.io.FileWriter;
 import java.io.IOException;
 
 public class PrimaryExp extends Node {
     private Exp exp;
     private LVal lVal;
-    private boolean isNumber;
-    private boolean isChar;
+    private Number number;
+    private Character char1;
 
     public PrimaryExp() {
         exp = null;
         lVal = null;
-        isNumber = false;
-        isChar = false;
+        number = null;
+        char1 = null;
     }
 
     @Override
@@ -29,11 +31,11 @@ public class PrimaryExp extends Node {
         this.exp = exp;
     }
 
-    public void setIsNumber(boolean isNumber) {
-        this.isNumber = isNumber;
+    public void setNumber(Number number) {
+        this.number = number;
     }
 
-    public void setIsChar(boolean isChar) {
-        this.isChar = isChar;
+    public void setChar1(Character char1) {
+        this.char1 = char1;
     }
 }

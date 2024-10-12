@@ -19,4 +19,8 @@ public class Block extends Node {
     public void addBlockItemArrayList(BlockItem blockItem) {
         this.blockItemArrayList.add(blockItem);
     }
+
+    public ArrayList<BlockItem> getBlockItemArrayList() {
+        return blockItemArrayList;
+    }
 }

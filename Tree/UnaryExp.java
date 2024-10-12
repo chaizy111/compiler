@@ -1,23 +1,37 @@
 package Tree;
 
+import Analysis.Token.Token;
+
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
 
 public class UnaryExp extends Node {
+    private Token ident;
+    private UnaryOp unaryOp;
     private UnaryExp unaryExp;
     private PrimaryExp primaryExp;
-    private ArrayList<Exp> funcParamArrayList;
+    private FuncRParams funcRParams;
 
     public UnaryExp() {
-        unaryExp = null;
-        primaryExp = null;
-        funcParamArrayList = new ArrayList<>();
+        this.ident = null;
+        this.unaryOp = null;
+        this.unaryExp = null;
+        this.primaryExp = null;
+        this.funcRParams = null;
     }
 
     @Override
     public void print(FileWriter output) throws IOException {
         output.write("<UnaryExp>" + "\n");
+    }
+
+    public void setIdent(Token ident) {
+        this.ident = ident;
+    }
+
+    public void setUnaryOp(UnaryOp unaryOp) {
+        this.unaryOp = unaryOp;
     }
 
     public void setUnaryExp(UnaryExp unaryExp) {
@@ -28,7 +42,7 @@ public class UnaryExp extends Node {
         this.primaryExp = primaryExp;
     }
 
-    public void setFuncParamArrayList(ArrayList<Exp> funcParamArrayList) {
-        this.funcParamArrayList = funcParamArrayList;
+    public void setFuncRParams(FuncRParams funcRParams) {
+        this.funcRParams = funcRParams;
     }
 }
