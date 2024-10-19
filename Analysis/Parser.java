@@ -40,6 +40,10 @@ public class Parser {
         compUnit = parseCompUnit();
     }
 
+    public CompUnit getCompUnit() {
+        return compUnit;
+    }
+
     private void nextToken() throws IOException {
         // 词法分析在这里输出
         if (token != null && token.getType() != TokenType.tokenType.END) // 一定要在前边输出，这样才符合题目的要求

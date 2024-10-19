@@ -1,5 +1,6 @@
 import Analysis.Lexer;
 import Analysis.Parser;
+import Analysis.Visitor;
 import Error.ErrorDealer;
 
 import java.io.*;
@@ -17,6 +18,9 @@ public class Compiler {
 //        lexer.printToken();
         Parser parser = new Parser(lexer, output, errorDealer);
         parser.parse();
+        Visitor visitor = new Visitor(parser.getCompUnit(), output, errorDealer);
+        visitor.visit();
+
         errorDealer.printError();
 
         input.close();
