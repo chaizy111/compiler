@@ -28,4 +28,8 @@ public class AddExp extends Node {
     public void addSymbolList(Token token) {
         this.symbolList.add(token);
     }
+
+    public ArrayList<MulExp> getMulExpArrayList() {
+        return mulExpArrayList;
+    }
 }

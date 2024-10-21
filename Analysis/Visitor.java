@@ -104,23 +104,27 @@ public class Visitor {
     }
 
     private void visitCompUnit(CompUnit compUnit) {
+        if (compUnit == null) return;
         for (Decl d : compUnit.getDeclArrayList()) visitDecl(d);
         for (FuncDef f : compUnit.getFuncDefArrayList()) visitFuncDef(f);
         visitMainFuncDef(compUnit.getMainFuncDef());
     }
 
     private void visitDecl(Decl decl) {
+        if (decl == null) return;
         if (decl instanceof ConstDecl) visitConstDecl((ConstDecl) decl);
         else if (decl instanceof ValDecl) visitVarDecl((ValDecl) decl);
     }
 
     private void visitConstDecl(ConstDecl constDecl) {
+        if (constDecl == null) return;
         for (ConstDef c : constDecl.getConstDefList()) {
             visitConstDef(c, constDecl.getbType());
         }
     }
 
     private void visitConstDef(ConstDef constDef, TokenType.tokenType bType) {
+        if (constDef == null) return;
         // 配置symbol
         Symbol s = new Symbol(nowTableId, constDef.getIdent().getString());
         if(constDef.getConstExp() == null) s.setType(0);
@@ -145,12 +149,14 @@ public class Visitor {
     }
 
     private void visitVarDecl(ValDecl valDecl) {
+        if (valDecl == null) return;
         for (ValDef v : valDecl.getVarDefList()) {
             visitVarDef(v, valDecl.getbType());
         }
     }
 
     private void visitVarDef(ValDef valDef, TokenType.tokenType bType) {
+        if (valDef == null) return;
         // 配置symbol
         Symbol s = new Symbol(nowTableId, valDef.getIdent().getString());
         if(valDef.getConstExp() == null) s.setType(0);
@@ -176,6 +182,7 @@ public class Visitor {
     }
 
     private void visitFuncDef(FuncDef funcDef) {
+        if (funcDef == null) return;
         // 遇到funcDef，要先把函数名这个symbol放到当前的symbolTable中，
         Symbol s = new Symbol(nowTableId, funcDef.getIdent().getString());
         s.setType(2);
@@ -201,12 +208,14 @@ public class Visitor {
     }
 
     private void visitMainFuncDef(MainFuncDef mainFuncDef) {
+        if (mainFuncDef == null) return;
         newSymbolTable();
         visitFuncBlock(mainFuncDef.getBlock(), false);
         returnFatherTable();
     }
 
     private int visitFuncType(FuncType funcType) {
+        if (funcType == null) return 0;
         TokenType.tokenType t = funcType.getToken().getType();
         if (t == TokenType.tokenType.INTTK) return 0;
         else if (t == TokenType.tokenType.CHARTK) return 1;
@@ -214,7 +223,8 @@ public class Visitor {
     }
 
     private Value visitFuncFParams(FuncFParams funcFParams) {
-        if (funcFParams == null) return new FuncValue(nowTableId, 0);
+        if (funcFParams == null || funcFParams.getFuncFParamArrayList().isEmpty())
+            return new FuncValue(nowTableId, 0);
         for (FuncFParam f:funcFParams.getFuncFParamArrayList()) {
             visitFuncFParam(f);
         }
@@ -222,6 +232,7 @@ public class Visitor {
     }
 
     private void visitFuncFParam(FuncFParam funcFParam) {
+        if (funcFParam == null) return;
         // 配置symbol
         Symbol s = new Symbol(nowTableId, funcFParam.getIdent().getString());
         if (funcFParam.isArray()) s.setType(1);
@@ -241,6 +252,7 @@ public class Visitor {
 
     // 由于处理逻辑不同，所以把不同的block分开
     private void visitBlock(Block block, boolean isInForBlock) { // 两种情况，循环块与非循环块
+        if (block == null) return;
         newSymbolTable();
         for (BlockItem b : block.getBlockItemArrayList()) {
             visitBlockItem(b, isInForBlock);
@@ -249,6 +261,7 @@ public class Visitor {
     }
 
     private void visitFuncBlock(Block block, boolean isVoid) {
+        if (block == null) return;
         ReturnStmt returnStmt = null;
         for (BlockItem b : block.getBlockItemArrayList()) {
             if (b instanceof ReturnStmt) { // returnStmt单独处理
@@ -274,11 +287,13 @@ public class Visitor {
     }
 
     private void visitBlockItem(BlockItem blockItem, boolean isInForBlock) {
+        if (blockItem == null) return;
         if (blockItem instanceof Decl) visitDecl((Decl) blockItem);
         else visitStmt((Stmt) blockItem, isInForBlock);
     }
 
     private void visitStmt(Stmt stmt, boolean isInForBlock) {
+        if (stmt == null) return;
         // 由于要对for有关block进行判断，来看是否出现m错，设置了isInForBlock变量，这个变量的相关逻辑比较绕，
         // 主要就是如果是在for的stmt是block型，则在visitBlock时就将这个属性设为true，之后这个属性便会层层下传，直到for的block分析结束
         if (stmt instanceof IfStmt) visitIf((IfStmt) stmt, isInForBlock);
@@ -299,12 +314,14 @@ public class Visitor {
     }
 
     private void visitIf(IfStmt ifStmt, boolean isInForBlock) {
+        if (ifStmt == null) return;
         visitCond(ifStmt.getC());
         visitStmt(ifStmt.getS1(), isInForBlock);
         if (ifStmt.getS2() != null) visitStmt(ifStmt.getS2(), isInForBlock);
     }
 
     private void visitFor(For f) {
+        if (f == null) return;
         visitForStmt(f.getForStmt1());
         visitCond(f.getC());
         visitForStmt(f.getForStmt2());
@@ -313,11 +330,13 @@ public class Visitor {
     }
 
     private void visitReturnStmt(ReturnStmt returnStmt) {
+        if (returnStmt == null) return;
         //这里的visit是非func里的returnStmt，按理来说不会走到这里
         System.out.println("There may be something wrong in func dealing\n");
     }
 
     private void visitPrintfStmt(PrintfStmt printfStmt) { // 先处理错误，再visit里边的属性
+        if (printfStmt == null) return;
         //错误处理
         if (printfStmt.getFCharacterNumInString() != printfStmt.getExpArrayList().size()) {
             int errorLine = printfStmt.getLine();
@@ -329,6 +348,7 @@ public class Visitor {
     }
 
     private void visitLValStmt(LValStmt lValStmt) {
+        if (lValStmt == null) return;
         //先错误处理
         Token t = lValStmt.getlVal().getIdent();
         if (isConstSymbol(t.getString())) {
@@ -358,10 +378,12 @@ public class Visitor {
     }
 
     private void visitCond(Cond cond) {
+        if (cond == null) return;
         visitLOrExp(cond.getlOrExp());
     }
 
     private void visitLVal(LVal lVal) {
+        if (lVal == null) return;
         //先错误处理
         if (isUnDefinedSymbol(lVal.getIdent().getString())) {
             int errorLine = lVal.getIdent().getLine();
@@ -372,6 +394,7 @@ public class Visitor {
     }
 
     private void visitPrimaryExp(PrimaryExp primaryExp) {
+        if (primaryExp == null) return;
         if (primaryExp.getExp() != null) visitExp(primaryExp.getExp());
         else if (primaryExp.getlVal() != null) visitLVal(primaryExp.getlVal());
         else if (primaryExp.getNumber() != null) visitNumber(primaryExp.getNumber());
@@ -387,6 +410,7 @@ public class Visitor {
     }
 
     private void visitUnaryExp(UnaryExp unaryExp) {
+        if (unaryExp == null) return;
         if (unaryExp.getPrimaryExp() != null) visitPrimaryExp(unaryExp.getPrimaryExp());
         else if (unaryExp.getUnaryExp() != null) {
             visitUnaryOp(unaryExp.getUnaryOp());
@@ -401,11 +425,13 @@ public class Visitor {
                 Symbol s = getSymbol(t.getString());
                 FuncValue sValue = (FuncValue) s.getValue();
                 //再处理错误d
-                if (sValue.getParaNum() != unaryExp.getFuncRParams().getExpArrayList().size()) {
-                    int errorLine = t.getLine();
-                    errorDealer.errorD(errorLine);
-                } else {//再处理错误e
+                if (unaryExp.getFuncRParams() != null) {
+                    if (sValue.getParaNum() != unaryExp.getFuncRParams().getExpArrayList().size()) {
+                        int errorLine = t.getLine();
+                        errorDealer.errorD(errorLine);
+                    } else {//再处理错误e
 
+                    }
                 }
             }
         }
@@ -420,11 +446,15 @@ public class Visitor {
     }
 
     private void visitMulExp(MulExp mulExp) {
-
+        if (mulExp == null) return;
+        for (UnaryExp u : mulExp.getUnaryExpArrayList()) {
+            visitUnaryExp(u);
+        }
     }
 
     private void visitAddExp(AddExp addExp) {
-
+        if (addExp == null) return;
+        for (MulExp m : addExp.getMulExpArrayList()) visitMulExp(m);
     }
 
     private void visitRelExp(RelExp relExp) {

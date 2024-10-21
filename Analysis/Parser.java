@@ -267,6 +267,10 @@ public class Parser {
         if(match(token, TokenType.tokenType.END)) return null; //读到结束就返回空值
         Block b = new Block();
         if(match(token, TokenType.tokenType.LBRACE)) {
+            if (token.getType() == TokenType.tokenType.RBRACE) {
+                b.addBlockItemArrayList(new Stmt()); // 这种情况是函数的大括号内为空的情况，需要插入一个空的item供后边visit
+                b.setEndLine(token.getLine());
+            }
             while (!match(token, TokenType.tokenType.RBRACE)) {
                 b.addBlockItemArrayList(parseBlockItem());
                 b.setEndLine(token.getLine()); // 通过这一行保存block结束时的行数，在visit时errorG会用到
@@ -406,7 +410,7 @@ public class Parser {
         return p;
     }
 
-    private LValStmt parseLValStmt() throws IOException { //TODO 两种类型杂糅，需要分开
+    private LValStmt parseLValStmt() throws IOException {
         //LVal '=' Exp ';'
         //| LVal '=' 'getint''('')'';'
         //| LVal '=' 'getchar''('')'';'
@@ -690,8 +694,8 @@ public class Parser {
 
     private boolean isFuncFParams() {
         int index = list.indexOf(token);
-        return list.get(index + 1).getType() != TokenType.tokenType.RPARENT
-                && list.get(index + 1).getType() != TokenType.tokenType.LBRACE;
+        return list.get(index).getType() != TokenType.tokenType.RPARENT
+                && list.get(index).getType() != TokenType.tokenType.LBRACE;
     }
 
     private boolean isFuncType() {
