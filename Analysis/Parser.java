@@ -46,8 +46,8 @@ public class Parser {
 
     private void nextToken() throws IOException {
         // 词法分析在这里输出
-        if (token != null && token.getType() != TokenType.tokenType.END) // 一定要在前边输出，这样才符合题目的要求
-            outputfile.write(token.getType() + " " + token.getString() + "\n");
+        //if (token != null && token.getType() != TokenType.tokenType.END) // 一定要在前边输出，这样才符合题目的要求
+        //    outputfile.write(token.getType() + " " + token.getString() + "\n");
         token = preRead;
         preRead = list.get(preIndex);
         preIndex++;
@@ -70,7 +70,7 @@ public class Parser {
                 c.addDeclArrayList(parseVarDecl());
             }
         }
-        c.print(outputfile);
+        //c.print(outputfile);
         return c;
     }
 
@@ -88,7 +88,7 @@ public class Parser {
         }
         if(!match(token, TokenType.tokenType.SEMICN)) // 错误处理
             error.errorI(list.get(list.indexOf(token) - 1).getLine());
-        c.print(outputfile);
+        //c.print(outputfile);
         return c;
     }
 
@@ -105,7 +105,7 @@ public class Parser {
         }
         if(!match(token, TokenType.tokenType.SEMICN)) // 错误处理
             error.errorI(list.get(list.indexOf(token) - 1).getLine());
-        v.print(outputfile);
+        //v.print(outputfile);
         return v;
     }
 
@@ -122,7 +122,7 @@ public class Parser {
         }
         match(token, TokenType.tokenType.ASSIGN);
         c.setConstInitVal(parseConstInitVal());
-        c.print(outputfile);
+        //c.print(outputfile);
         return c;
     }
 
@@ -140,7 +140,7 @@ public class Parser {
         if(match(token, TokenType.tokenType.ASSIGN)) {
             v.setInitVal(parseInitVal());
         }
-        v.print(outputfile);
+        //v.print(outputfile);
         return v;
     }
 
@@ -161,7 +161,7 @@ public class Parser {
         } else {
             c.setConstExp(parseConstExp());
         }
-        c.print(outputfile);
+        //c.print(outputfile);
         return c;
     }
 
@@ -182,7 +182,7 @@ public class Parser {
         } else {
             i.setExp(parseExp());
         }
-        i.print(outputfile);
+        //i.print(outputfile);
         return i;
     }
 
@@ -199,7 +199,7 @@ public class Parser {
                 error.errorJ(list.get(list.indexOf(token) - 1).getLine());
         }
         if(isBlock()) f.setBlock(parseBlock());
-        f.print(outputfile);
+        //f.print(outputfile);
         return f;
     }
 
@@ -211,7 +211,7 @@ public class Parser {
                 || match(token, TokenType.tokenType.INTTK)
                 || match(token, TokenType.tokenType.CHARTK)) {
             f.setToken(list.get(list.indexOf(token) - 1));
-            f.print(outputfile);
+        //    f.print(outputfile);
         }
         return f;
     }
@@ -225,7 +225,7 @@ public class Parser {
             list.add(parseFuncFParam());
         } while (match(token, TokenType.tokenType.COMMA));
         f.setFuncFParamArrayList(list);
-        f.print(outputfile);
+        //f.print(outputfile);
         return f;
     }
 
@@ -243,7 +243,7 @@ public class Parser {
             if(!match(token, TokenType.tokenType.RBRACK)) // 错误处理
                 error.errorK(list.get(list.indexOf(token) - 1).getLine());
         }
-        f.print(outputfile);
+        //f.print(outputfile);
         return f;
     }
 
@@ -258,7 +258,7 @@ public class Parser {
         if(!match(token, TokenType.tokenType.RPARENT)) // 错误处理
             error.errorJ(list.get(list.indexOf(token) - 1).getLine());
         if(isBlock()) m.setBlock(parseBlock());
-        m.print(outputfile);
+        //m.print(outputfile);
         return m;
     }
 
@@ -267,9 +267,11 @@ public class Parser {
         if(match(token, TokenType.tokenType.END)) return null; //读到结束就返回空值
         Block b = new Block();
         if(match(token, TokenType.tokenType.LBRACE)) {
-            while (!match(token, TokenType.tokenType.RBRACE))
+            while (!match(token, TokenType.tokenType.RBRACE)) {
                 b.addBlockItemArrayList(parseBlockItem());
-            b.print(outputfile);
+                b.setEndLine(token.getLine()); // 通过这一行保存block结束时的行数，在visit时errorG会用到
+            }
+        //    b.print(outputfile);
         }
         return b;
     }
@@ -303,10 +305,12 @@ public class Parser {
         } else if (isFor()) {
             return parseFor();
         } else if (match(token, TokenType.tokenType.BREAKTK) || match(token, TokenType.tokenType.CONTINUETK)) {
+            Token bOrC = list.get(list.indexOf(token) - 1);
             if(!match(token, TokenType.tokenType.SEMICN)) // 错误处理
                 error.errorI(list.get(list.indexOf(token) - 1).getLine());
             Stmt s = new Stmt();
-            s.print(outputfile);
+            s.setbOrC(bOrC);
+        //    s.print(outputfile);
             return s;
         } else if (isReturn()) {
             return parseReturnStmt();
@@ -315,7 +319,7 @@ public class Parser {
         }  else if (isBlock()) {
             Stmt s = new Stmt();
             s.setB(parseBlock());
-            s.print(outputfile);
+        //    s.print(outputfile);
             return s;
         } else if (isLValStmt()) {
             return parseLValStmt();
@@ -326,7 +330,7 @@ public class Parser {
             }
             if(!match(token, TokenType.tokenType.SEMICN)) // 错误处理
                 error.errorI(list.get(list.indexOf(token) - 1).getLine());
-            s.print(outputfile);
+        //    s.print(outputfile);
             return s;
         }
     }
@@ -343,7 +347,7 @@ public class Parser {
         }
         i.setS1(parseStmt());
         if(match(token, TokenType.tokenType.ELSETK)) i.setS2(parseStmt());
-        i.print(outputfile);
+        //i.print(outputfile);
         return i;
     }
 
@@ -366,7 +370,7 @@ public class Parser {
         }
         match(token, TokenType.tokenType.RPARENT);
         f.setS(parseStmt());
-        f.print(outputfile);
+        //f.print(outputfile);
         return f;
     }
 
@@ -374,11 +378,12 @@ public class Parser {
         // 'return' [Exp] ';'
         if(match(token, TokenType.tokenType.END)) return null; //读到结束就返回空值
         ReturnStmt r = new ReturnStmt();
+        r.setLine(token.getLine());
         match(token, TokenType.tokenType.RETURNTK);
         if (isExp()) r.setExp(parseExp());
         if(!match(token, TokenType.tokenType.SEMICN)) // 错误处理
             error.errorI(list.get(list.indexOf(token) - 1).getLine());
-        r.print(outputfile);
+        //r.print(outputfile);
         return r;
     }
 
@@ -397,7 +402,7 @@ public class Parser {
             error.errorJ(list.get(list.indexOf(token) - 1).getLine());
         if(!match(token, TokenType.tokenType.SEMICN)) // 错误处理
             error.errorI(list.get(list.indexOf(token) - 1).getLine());
-        p.print(outputfile);
+        //p.print(outputfile);
         return p;
     }
 
@@ -426,7 +431,7 @@ public class Parser {
         }
         if(!match(token, TokenType.tokenType.SEMICN)) // 错误处理
             error.errorI(list.get(list.indexOf(token) - 1).getLine());
-        l.print(outputfile);
+        //l.print(outputfile);
         return l;
     }
 
@@ -434,14 +439,14 @@ public class Parser {
         // LVal → Ident ['[' Exp ']']
         if(match(token, TokenType.tokenType.END)) return null; //读到结束就返回空值
         LVal l = new LVal();
-        l.setIdent(token.getString());
+        l.setIdent(token);
         match(token, TokenType.tokenType.IDENFR);
         if(match(token, TokenType.tokenType.LBRACK)) {
             l.setExp(parseExp());
             if(!match(token, TokenType.tokenType.RBRACK)) // 错误处理
                 error.errorK(list.get(list.indexOf(token) - 1).getLine());
         }
-        l.print(outputfile);
+        //l.print(outputfile);
         return l;
     }
 
@@ -450,7 +455,7 @@ public class Parser {
         if(match(token, TokenType.tokenType.END)) return null; //读到结束就返回空值
         ConstExp c = new ConstExp();
         c.setAddExp(parseAddExp());
-        c.print(outputfile);
+        //c.print(outputfile);
         return c;
     }
 
@@ -459,7 +464,7 @@ public class Parser {
         if(match(token, TokenType.tokenType.END)) return null; //读到结束就返回空值
         Exp e= new Exp();
         e.setAddExp(parseAddExp());
-        e.print(outputfile);
+        //e.print(outputfile);
         return e;
     }
 
@@ -469,7 +474,7 @@ public class Parser {
         AddExp a = new AddExp();
         do {
             a.addMulExpArrayList(parseMulExp());
-            a.print(outputfile);
+        //    a.print(outputfile);
             if(match(token, TokenType.tokenType.PLUS) || match(token, TokenType.tokenType.MINU)) {
                 // 存储符号，为了后边的分析
                 a.addSymbolList(list.get(list.indexOf(token) - 1));
@@ -486,7 +491,7 @@ public class Parser {
         MulExp m = new MulExp();
         do {
            m.addUnaryExpArrayList(parseUnaryExp());
-           m.print(outputfile);
+        //   m.print(outputfile);
            if (match(token, TokenType.tokenType.MULT)
                    || match(token, TokenType.tokenType.DIV)
                    || match(token, TokenType.tokenType.MOD)) { // 存储符号，便于后边分析
@@ -516,7 +521,7 @@ public class Parser {
         } else {
             u.setPrimaryExp(parsePrimaryExp());
         }
-        u.print(outputfile);
+        //u.print(outputfile);
         return u;
     }
 
@@ -535,7 +540,7 @@ public class Parser {
         } else if (isCharacter()) {
             p.setChar1(parseCharacter());
         }
-        p.print(outputfile);
+        //p.print(outputfile);
         return p;
     }
 
@@ -544,7 +549,7 @@ public class Parser {
         if(match(token, TokenType.tokenType.END)) return null; //读到结束就返回空值
         Cond c = new Cond();
         c.setlOrExp(parseLOrExp());
-        c.print(outputfile);
+        //c.print(outputfile);
         return c;
     }
 
@@ -554,7 +559,7 @@ public class Parser {
         LOrExp l = new LOrExp();
         do{
             l.addLAndExpArrayList(parseLAndExp());
-            l.print(outputfile);
+        //    l.print(outputfile);
         } while (match(token, TokenType.tokenType.OR));
         return l;
     }
@@ -565,7 +570,7 @@ public class Parser {
         LAndExp l = new LAndExp();
         do{
             l.addEqExpArrayList(parseEqExp());
-            l.print(outputfile);
+        //    l.print(outputfile);
         } while (match(token, TokenType.tokenType.AND));
         return l;
     }
@@ -576,7 +581,7 @@ public class Parser {
         EqExp e = new EqExp();
         do{
             e.addRelExpArrayList(parseRelExp());
-            e.print(outputfile);
+        //    e.print(outputfile);
             if(match(token, TokenType.tokenType.EQL) || match(token, TokenType.tokenType.NEQ)) {
                 e.addSymbolList(list.get(list.indexOf(token) - 1));
             } else {
@@ -592,7 +597,7 @@ public class Parser {
         RelExp r = new RelExp();
         do{
            r.addAddExpArrayList(parseAddExp());
-           r.print(outputfile);
+        //   r.print(outputfile);
            if(match(token, TokenType.tokenType.LSS) || match(token, TokenType.tokenType.LEQ)
                    || match(token, TokenType.tokenType.GRE) || match(token, TokenType.tokenType.GEQ)) {
                r.addSymbolList(list.get(list.indexOf(token) - 1));
@@ -609,7 +614,7 @@ public class Parser {
         Character c = new Character();
         if (match(token, TokenType.tokenType.CHRCON)) {
             c.setToken(list.get(list.indexOf(token) - 1));
-            c.print(outputfile);
+        //    c.print(outputfile);
         }
         return c;
     }
@@ -621,7 +626,7 @@ public class Parser {
         if(isLVal()) f.setlVal(parseLVal());
         match(token, TokenType.tokenType.ASSIGN);
         if(isExp()) f.setExp(parseExp());
-        f.print(outputfile);
+        //f.print(outputfile);
         return f;
     }
 
@@ -634,7 +639,7 @@ public class Parser {
             list.add(parseExp());
         } while (match(token, TokenType.tokenType.COMMA));
         f.setExpArrayList(list);
-        if(!list.isEmpty())f.print(outputfile);
+        //if(!list.isEmpty())f.print(outputfile);
         return f;
     }
 
@@ -644,7 +649,7 @@ public class Parser {
         Number n = new Number();
         if (match(token, TokenType.tokenType.INTCON)) {
             n.setToken(list.get(list.indexOf(token) - 1));
-            n.print(outputfile);
+        //    n.print(outputfile);
         }
         return n;
     }
@@ -657,7 +662,7 @@ public class Parser {
                 || match(token, TokenType.tokenType.MINU)
                 || match(token, TokenType.tokenType.NOT)) {
             u.setToken(list.get(list.indexOf(token) - 1));
-            u.print(outputfile);
+        //    u.print(outputfile);
         }
         return u;
     }

@@ -18,4 +18,8 @@ public class Cond extends Node {
     public void setlOrExp(LOrExp lOrExp) {
         this.lOrExp = lOrExp;
     }
+
+    public LOrExp getlOrExp() {
+        return lOrExp;
+    }
 }

@@ -22,4 +22,16 @@ public class IfStmt extends Stmt {
     public void setS2(Stmt s2) {
         this.s2 = s2;
     }
+
+    public Cond getC() {
+        return c;
+    }
+
+    public Stmt getS1() {
+        return s1;
+    }
+
+    public Stmt getS2() {
+        return s2;
+    }
 }

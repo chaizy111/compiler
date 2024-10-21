@@ -1,14 +1,16 @@
 package Tree;
 
+import Analysis.Token.Token;
+
 import java.io.FileWriter;
 import java.io.IOException;
 
 public class LVal extends Node {
-    private String ident;
+    private Token ident;
     private Exp exp;
 
     public LVal() {
-        ident = "";
+        ident = null;
         exp = null;
     }
 
@@ -17,11 +19,19 @@ public class LVal extends Node {
         output.write("<LVal>" + "\n");
     }
 
-    public void setIdent(String ident) {
+    public void setIdent(Token ident) {
         this.ident = ident;
     }
 
     public void setExp(Exp exp) {
         this.exp = exp;
+    }
+
+    public Exp getExp() {
+        return exp;
+    }
+
+    public Token getIdent() {
+        return ident;
     }
 }

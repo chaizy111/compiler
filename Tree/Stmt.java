@@ -1,15 +1,20 @@
 package Tree;
 
+import Analysis.Token.Token;
+import Analysis.Token.TokenType;
+
 import java.io.FileWriter;
 import java.io.IOException;
 
 public class Stmt extends BlockItem {
     private Block b;
     private Exp e;
+    private Token bOrC;
 
     public Stmt() {
         b = null;
         e = null;
+        bOrC = null;
     }
 
     @Override
@@ -23,5 +28,21 @@ public class Stmt extends BlockItem {
 
     public void setE(Exp e) {
         this.e = e;
+    }
+
+    public void setbOrC(Token bOrC) {
+        this.bOrC = bOrC;
+    }
+
+    public Block getB() {
+        return b;
+    }
+
+    public Exp getE() {
+        return e;
+    }
+
+    public Token getbOrC() {
+        return bOrC;
     }
 }

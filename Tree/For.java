@@ -28,4 +28,20 @@ public class For extends Stmt {
     public void setS(Stmt s) {
         this.s = s;
     }
+
+    public ForStmt getForStmt1() {
+        return forStmt1;
+    }
+
+    public ForStmt getForStmt2() {
+        return forStmt2;
+    }
+
+    public Cond getC() {
+        return c;
+    }
+
+    public Stmt getS() {
+        return s;
+    }
 }

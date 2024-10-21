@@ -27,4 +27,12 @@ public class ValDecl extends Decl {
     public void addVarDefList(ValDef valDef) {
         this.varDefList.add(valDef);
     }
+
+    public TokenType.tokenType getbType() {
+        return bType;
+    }
+
+    public ArrayList<ValDef> getVarDefList() {
+        return varDefList;
+    }
 }

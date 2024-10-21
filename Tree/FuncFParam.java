@@ -33,4 +33,16 @@ public class FuncFParam extends Node {
     public void setIdent(Token ident) {
         this.ident = ident;
     }
+
+    public TokenType.tokenType getbType() {
+        return bType;
+    }
+
+    public Token getIdent() {
+        return ident;
+    }
+
+    public boolean isArray() {
+        return isArray;
+    }
 }

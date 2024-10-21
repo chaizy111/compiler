@@ -45,4 +45,24 @@ public class UnaryExp extends Node {
     public void setFuncRParams(FuncRParams funcRParams) {
         this.funcRParams = funcRParams;
     }
+
+    public Token getIdent() {
+        return ident;
+    }
+
+    public UnaryExp getUnaryExp() {
+        return unaryExp;
+    }
+
+    public UnaryOp getUnaryOp() {
+        return unaryOp;
+    }
+
+    public PrimaryExp getPrimaryExp() {
+        return primaryExp;
+    }
+
+    public FuncRParams getFuncRParams() {
+        return funcRParams;
+    }
 }

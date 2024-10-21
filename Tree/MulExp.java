@@ -27,4 +27,8 @@ public class MulExp extends Node {
     public void addSymbolList(Token token) {
         this.symbolList.add(token);
     }
+
+    public ArrayList<UnaryExp> getUnaryExpArrayList() {
+        return unaryExpArrayList;
+    }
 }

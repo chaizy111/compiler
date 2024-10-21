@@ -25,8 +25,12 @@ public class SymbolTable {
         return fatherId;
     }
 
-    public HashMap<String, Symbol> getDirectory() {
+    public LinkedHashMap<String, Symbol> getDirectory() {
         return directory;
+    }
+
+    public void addSymbol(Symbol symbol) {
+        directory.put(symbol.getSymbolName(), symbol);
     }
 
     public void printSymbolTable(FileWriter outputfile) throws IOException {

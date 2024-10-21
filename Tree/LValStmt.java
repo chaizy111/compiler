@@ -35,4 +35,20 @@ public class LValStmt extends Stmt {
     public void setIsGetChar(boolean isGetChar) {
         this.isGetChar = isGetChar;
     }
+
+    public LVal getlVal() {
+        return lVal;
+    }
+
+    public Exp getExp() {
+        return exp;
+    }
+
+    public boolean isGetChar() {
+        return isGetChar;
+    }
+
+    public boolean isGetInt() {
+        return isGetInt;
+    }
 }

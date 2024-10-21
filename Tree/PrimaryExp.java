@@ -38,4 +38,20 @@ public class PrimaryExp extends Node {
     public void setChar1(Character char1) {
         this.char1 = char1;
     }
+
+    public Exp getExp() {
+        return exp;
+    }
+
+    public LVal getlVal() {
+        return lVal;
+    }
+
+    public Character getCharacter() {
+        return char1;
+    }
+
+    public Number getNumber() {
+        return number;
+    }
 }

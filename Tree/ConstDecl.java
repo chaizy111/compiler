@@ -27,4 +27,12 @@ public class ConstDecl extends Decl {
     public void addConstDefList(ConstDef constDef) {
         this.constDefList.add(constDef);
     }
+
+    public ArrayList<ConstDef> getConstDefList() {
+        return constDefList;
+    }
+
+    public TokenType.tokenType getbType() {
+        return bType;
+    }
 }

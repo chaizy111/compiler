@@ -32,4 +32,16 @@ public class ValDef extends Node {
     public void setInitVal(InitVal initVal) {
         this.initVal = initVal;
     }
+
+    public Token getIdent() {
+        return ident;
+    }
+
+    public ConstExp getConstExp() {
+        return constExp;
+    }
+
+    public InitVal getInitVal() {
+        return initVal;
+    }
 }

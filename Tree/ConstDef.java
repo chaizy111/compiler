@@ -32,4 +32,16 @@ public class ConstDef extends Node {
     public void setConstInitVal(ConstInitVal constInitVal) {
         this.constInitVal = constInitVal;
     }
+
+    public Token getIdent() {
+        return ident;
+    }
+
+    public ConstExp getConstExp() {
+        return constExp;
+    }
+
+    public ConstInitVal getConstInitVal() {
+        return constInitVal;
+    }
 }

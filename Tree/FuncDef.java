@@ -39,4 +39,20 @@ public class FuncDef extends Node {
     public void setIdent(Token ident) {
         this.ident = ident;
     }
+
+    public FuncType getFuncType() {
+        return funcType;
+    }
+
+    public Block getBlock() {
+        return block;
+    }
+
+    public Token getIdent() {
+        return ident;
+    }
+
+    public FuncFParams getFuncFParams() {
+        return funcFParams;
+    }
 }
