@@ -33,4 +33,16 @@ public class ConstInitVal extends Node {
     public void addConstExpArrayList(ConstExp constExp) {
         this.constExpArrayList.add(constExp);
     }
+
+    public ConstExp getConstExp() {
+        return constExp;
+    }
+
+    public Token getStringConst() {
+        return stringConst;
+    }
+
+    public ArrayList<ConstExp> getConstExpArrayList() {
+        return constExpArrayList;
+    }
 }

@@ -27,4 +27,8 @@ public class RelExp extends Node {
     public void addSymbolList(Token token) {
         this.symbolList.add(token);
     }
+
+    public ArrayList<AddExp> getAddExpArrayList() {
+        return addExpArrayList;
+    }
 }

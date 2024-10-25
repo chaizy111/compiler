@@ -47,7 +47,7 @@ public class Parser {
     private void nextToken() throws IOException {
         // 词法分析在这里输出
         //if (token != null && token.getType() != TokenType.tokenType.END) // 一定要在前边输出，这样才符合题目的要求
-        //    outputfile.write(token.getType() + " " + token.getString() + "\n");
+        //   outputfile.write(token.getType() + " " + token.getString() + "\n");
         token = preRead;
         preRead = list.get(preIndex);
         preIndex++;

@@ -13,6 +13,7 @@ import Tree.Number;
 
 import java.io.FileWriter;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 
 public class Visitor {
@@ -128,7 +129,10 @@ public class Visitor {
         // 配置symbol
         Symbol s = new Symbol(nowTableId, constDef.getIdent().getString());
         if(constDef.getConstExp() == null) s.setType(0);
-        else s.setType(1);
+        else { //TODO: 如果是数组，那么中括号里边的信息也应该传入符号表中，这里还没实现
+            visitConstExp(constDef.getConstExp());
+            s.setType(1);
+        }
         if (bType.equals(TokenType.tokenType.INTTK)) s.setBtype(0);
         else s.setBtype(1);
         s.setConst(true);
@@ -143,9 +147,17 @@ public class Visitor {
         addSymbol(s);
     }
 
-    //TODO
-    private Value visitConstInitVal(ConstInitVal constInitVal) {
-        return null;
+    //这里的分析先将等号右边作为一个整体传入Value，然后value保存在左边符号的符号表内，之后再对右边进行分析
+    private Value visitConstInitVal(ConstInitVal constInitVal) { // TODO：可能需要对value进行更多的处理
+        Value value = new Value();
+        value.setConstInitVal(constInitVal);
+        if (constInitVal.getConstExp() != null) visitConstExp(constInitVal.getConstExp());
+        else if (!constInitVal.getConstExpArrayList().isEmpty()) {
+            for (ConstExp c: constInitVal.getConstExpArrayList()) {
+                visitConstExp(c);
+            }
+        }
+        return value;
     }
 
     private void visitVarDecl(ValDecl valDecl) {
@@ -160,7 +172,10 @@ public class Visitor {
         // 配置symbol
         Symbol s = new Symbol(nowTableId, valDef.getIdent().getString());
         if(valDef.getConstExp() == null) s.setType(0);
-        else s.setType(1);
+        else {//TODO: 如果是数组，那么中括号里边的信息也应该传入符号表中，这里还没实现
+            visitConstExp(valDef.getConstExp());
+            s.setType(1);
+        }
         if (bType.equals(TokenType.tokenType.INTTK)) s.setBtype(0);
         else s.setBtype(1);
         s.setConst(false);
@@ -176,9 +191,17 @@ public class Visitor {
         addSymbol(s);
     }
 
-    //TODO
-    private Value visitInitVal(InitVal initVal) {
-        return null;
+    //与constInitVal逻辑一致
+    private Value visitInitVal(InitVal initVal) { // TODO：可能需要对value进行更多的处理
+        Value value = new Value();
+        value.setInitVal(initVal);
+        if (initVal.getExp() != null) visitExp(initVal.getExp());
+        else if (!initVal.getExpArrayList().isEmpty()) {
+            for (Exp e: initVal.getExpArrayList()) {
+                visitExp(e);
+            }
+        }
+        return value;
     }
 
     private void visitFuncDef(FuncDef funcDef) {
@@ -189,22 +212,23 @@ public class Visitor {
         int bType = visitFuncType(funcDef.getFuncType());
         s.setBtype(bType);
         s.setConst(false);
-        // 再新建一个symbolTable，
-        newSymbolTable();
-        // 进行后续的分析
-        Value v = visitFuncFParams(funcDef.getFuncFParams());
-        // 把存储参数的符号表的编号传给s
-        s.setValue(v);
-        visitFuncBlock(funcDef.getBlock(), bType == 2);
-        // 最后再返回上一级symbolTable（即将nowTableId改成fatherTableId）
-        returnFatherTable();
-        //错误处理,将s加到符号表中
         if(isDuplicateSymbol(s.getSymbolName())) {
             int errorLine = funcDef.getIdent().getLine();
             errorDealer.errorB(errorLine);
         } else {
             addSymbol(s);
         }
+        // 再新建一个symbolTable，
+        // 注意函数的block与普通block的不同，函数的block需要在上一层建立，因为需要将参数进行存储，普通block在visitBlock函数中建立即可
+        newSymbolTable();
+        // 进行后续的分析，这里返回的value存储了参数相关的信息
+        Value v = visitFuncFParams(funcDef.getFuncFParams());
+        // 把存储参数的符号表的编号传给s
+        s.setValue(v);
+        // 分析后边的block，需要将函数是否为void类型传入函数以供后续判断
+        visitFuncBlock(funcDef.getBlock(), bType == 2);
+        // 最后再返回上一级symbolTable（即将nowTableId改成fatherTableId）
+        returnFatherTable();
     }
 
     private void visitMainFuncDef(MainFuncDef mainFuncDef) {
@@ -228,6 +252,7 @@ public class Visitor {
         for (FuncFParam f:funcFParams.getFuncFParamArrayList()) {
             visitFuncFParam(f);
         }
+        //返回一个存储函数参数信息的符号表的序号以及函数参数的个数的value对象
         return new FuncValue(nowTableId, funcFParams.getFuncFParamArrayList().size());
     }
 
@@ -251,11 +276,12 @@ public class Visitor {
     }
 
     // 由于处理逻辑不同，所以把不同的block分开
-    private void visitBlock(Block block, boolean isInForBlock) { // 两种情况，循环块与非循环块
+    private void visitBlock(Block block, boolean isInForBlock, boolean isInVoidFunc) {
+        // 多种情况，循环块与非循环块，是否为void函数中的块
         if (block == null) return;
         newSymbolTable();
         for (BlockItem b : block.getBlockItemArrayList()) {
-            visitBlockItem(b, isInForBlock);
+            visitBlockItem(b, isInForBlock, isInVoidFunc);
         }
         returnFatherTable();
     }
@@ -276,29 +302,30 @@ public class Visitor {
             } else if (b instanceof Decl) {
                 visitDecl((Decl) b);
             } else if (b instanceof Stmt) {
-                visitStmt((Stmt) b, false);
+                visitStmt((Stmt) b, false, isVoid);
             }
         }
         // 错误处理
-        if (!isVoid && returnStmt == null) {
+        if (!isVoid && returnStmt == null) { //不是void型函数且没有返回语句
             int errorLine = block.getEndLine();
             errorDealer.errorG(errorLine);
         }
     }
 
-    private void visitBlockItem(BlockItem blockItem, boolean isInForBlock) {
+    private void visitBlockItem(BlockItem blockItem, boolean isInForBlock, boolean isInVoidFunc) {
         if (blockItem == null) return;
         if (blockItem instanceof Decl) visitDecl((Decl) blockItem);
-        else visitStmt((Stmt) blockItem, isInForBlock);
+        else visitStmt((Stmt) blockItem, isInForBlock, isInVoidFunc);
     }
 
-    private void visitStmt(Stmt stmt, boolean isInForBlock) {
+    private void visitStmt(Stmt stmt, boolean isInForBlock, boolean isInVoidFunc) {
         if (stmt == null) return;
         // 由于要对for有关block进行判断，来看是否出现m错，设置了isInForBlock变量，这个变量的相关逻辑比较绕，
         // 主要就是如果是在for的stmt是block型，则在visitBlock时就将这个属性设为true，之后这个属性便会层层下传，直到for的block分析结束
-        if (stmt instanceof IfStmt) visitIf((IfStmt) stmt, isInForBlock);
-        else if (stmt instanceof For) visitFor((For) stmt);
-        else if (stmt instanceof ReturnStmt) visitReturnStmt((ReturnStmt) stmt);
+        // 还要对是否是在void函数中进行判断，如果是在void函数中，那if，for，以及return语句就需要注意进行报错，所以需要传递isInVoidFunc参数
+        if (stmt instanceof IfStmt) visitIf((IfStmt) stmt, isInForBlock, isInVoidFunc);
+        else if (stmt instanceof For) visitFor((For) stmt, isInVoidFunc);
+        else if (stmt instanceof ReturnStmt) visitReturnStmt((ReturnStmt) stmt, isInVoidFunc);
         else if (stmt instanceof PrintfStmt) visitPrintfStmt((PrintfStmt) stmt);
         else if (stmt instanceof LValStmt) visitLValStmt((LValStmt) stmt);
         else if (stmt.getbOrC() != null) { // 处理break和continue
@@ -307,32 +334,38 @@ public class Visitor {
                 errorDealer.errorM(errorLine);
             }
         } else if (stmt.getB() != null) {
-            visitBlock(stmt.getB(), isInForBlock);
+            visitBlock(stmt.getB(), isInForBlock, isInVoidFunc);
         } else if (stmt.getE() != null) {
-            visitExp(stmt.getE());
+            visitExp(stmt.getE()); //
         }
     }
 
-    private void visitIf(IfStmt ifStmt, boolean isInForBlock) {
+    private void visitIf(IfStmt ifStmt, boolean isInForBlock, boolean isInVoidFunc) {
         if (ifStmt == null) return;
-        visitCond(ifStmt.getC());
-        visitStmt(ifStmt.getS1(), isInForBlock);
-        if (ifStmt.getS2() != null) visitStmt(ifStmt.getS2(), isInForBlock);
+        visitCond(ifStmt.getC()); //TODO：cond语句是否要有返回信息，这仍是一个需要考虑的问题
+        visitStmt(ifStmt.getS1(), isInForBlock, isInVoidFunc);
+        if (ifStmt.getS2() != null) visitStmt(ifStmt.getS2(), isInForBlock, isInVoidFunc);
     }
 
-    private void visitFor(For f) {
+    private void visitFor(For f, boolean isInVoidFunc) {
         if (f == null) return;
         visitForStmt(f.getForStmt1());
-        visitCond(f.getC());
+        visitCond(f.getC());//TODO：cond语句是否要有返回信息，这仍是一个需要考虑的问题
         visitForStmt(f.getForStmt2());
-        if (f.getS().getB() != null) visitBlock(f.getS().getB(), true);
-        else visitStmt(f.getS(), false);
+        if (f.getS().getB() != null) visitBlock(f.getS().getB(), true, isInVoidFunc);
+        else visitStmt(f.getS(), false, isInVoidFunc);
     }
 
-    private void visitReturnStmt(ReturnStmt returnStmt) {
+    private void visitReturnStmt(ReturnStmt returnStmt, boolean isInVoidFunc) {
         if (returnStmt == null) return;
-        //这里的visit是非func里的returnStmt，按理来说不会走到这里
-        System.out.println("There may be something wrong in func dealing\n");
+        if (isInVoidFunc) { // 如果在void函数中，就报错
+            if (returnStmt.getExp() != null) {
+                int errorLine = returnStmt.getLine();
+                errorDealer.errorF(errorLine);
+                return;
+            }
+        }
+        if (returnStmt.getExp() != null) visitExp(returnStmt.getExp());
     }
 
     private void visitPrintfStmt(PrintfStmt printfStmt) { // 先处理错误，再visit里边的属性
@@ -347,6 +380,7 @@ public class Visitor {
         }
     }
 
+    //TODO：从这个方法往后，所有visit方法的实现与使用都需要再三考虑，该不该返回值，返回什么样的值，都是要讨论的问题
     private void visitLValStmt(LValStmt lValStmt) {
         if (lValStmt == null) return;
         //先错误处理
@@ -357,6 +391,7 @@ public class Visitor {
         }
         //再处理LVal
         visitLVal(lValStmt.getlVal());
+        visitExp(lValStmt.getExp());
     }
 
     private void visitForStmt(ForStmt forStmt) {
@@ -372,9 +407,11 @@ public class Visitor {
         visitExp(forStmt.getExp());
     }
 
-    private void visitExp(Exp exp) {
-        if (exp == null) return;
-        visitAddExp(exp.getAddExp());
+    //TODO: null:-1, int/char:0, intArray/constIntArray: 2,charArray/constCharArray:3, others: 4
+    //从这往下所有visit方法大多返回一个int型的返回值，代表其分析到底是什么类型，这些返回值都只为error e的判断服务，如果想要具体的value值，需要更改实现
+    private int visitExp(Exp exp) {
+        if (exp == null) return -1;
+        return visitAddExp(exp.getAddExp());
     }
 
     private void visitCond(Cond cond) {
@@ -382,39 +419,46 @@ public class Visitor {
         visitLOrExp(cond.getlOrExp());
     }
 
-    private void visitLVal(LVal lVal) {
-        if (lVal == null) return;
+    private int visitLVal(LVal lVal) {
+        if (lVal == null) return -1;
         //先错误处理
         if (isUnDefinedSymbol(lVal.getIdent().getString())) {
             int errorLine = lVal.getIdent().getLine();
             errorDealer.errorC(errorLine);
+            return -1;
         }
-        //再处理exp
-        visitExp(lVal.getExp());
+        //再处理exp，这里使用t1与t2是看是数组还是变量，类似S[0]的情况
+        int t1 = visitExp(lVal.getExp());
+        int t2 = getSymbol(lVal.getIdent().getString()).judgeKindN();
+        if (t2 == 2 || t2 == 3) {
+            if (t1 == 0) return 0;
+        }
+        return t2;
     }
 
-    private void visitPrimaryExp(PrimaryExp primaryExp) {
-        if (primaryExp == null) return;
-        if (primaryExp.getExp() != null) visitExp(primaryExp.getExp());
-        else if (primaryExp.getlVal() != null) visitLVal(primaryExp.getlVal());
-        else if (primaryExp.getNumber() != null) visitNumber(primaryExp.getNumber());
-        else if (primaryExp.getCharacter() != null) visitCharacter(primaryExp.getCharacter());
+    private int visitPrimaryExp(PrimaryExp primaryExp) {
+        if (primaryExp == null) return -1;
+        if (primaryExp.getExp() != null) return visitExp(primaryExp.getExp());
+        else if (primaryExp.getlVal() != null) return visitLVal(primaryExp.getlVal());
+        else if (primaryExp.getNumber() != null) return visitNumber(primaryExp.getNumber());
+        else if (primaryExp.getCharacter() != null) return visitCharacter(primaryExp.getCharacter());
+        return -1;
     }
 
-    private Value visitNumber(Number number) {
-        return null;
+    private int visitNumber(Number number) {
+        return 0;
     }
 
-    private Value visitCharacter(Character character) {
-        return null;
+    private int visitCharacter(Character character) {
+        return 0;
     }
 
-    private void visitUnaryExp(UnaryExp unaryExp) {
-        if (unaryExp == null) return;
-        if (unaryExp.getPrimaryExp() != null) visitPrimaryExp(unaryExp.getPrimaryExp());
+    private int visitUnaryExp(UnaryExp unaryExp) {
+        if (unaryExp == null) return -1;
+        if (unaryExp.getPrimaryExp() != null) return visitPrimaryExp(unaryExp.getPrimaryExp());
         else if (unaryExp.getUnaryExp() != null) {
             visitUnaryOp(unaryExp.getUnaryOp());
-            visitUnaryExp(unaryExp.getUnaryExp());
+            return visitUnaryExp(unaryExp.getUnaryExp());
         } else if (unaryExp.getIdent() != null) {
             Token t = unaryExp.getIdent();
             // 先处理错误c
@@ -429,50 +473,98 @@ public class Visitor {
                     if (sValue.getParaNum() != unaryExp.getFuncRParams().getExpArrayList().size()) {
                         int errorLine = t.getLine();
                         errorDealer.errorD(errorLine);
-                    } else {//再处理错误e
-
+                    } else {//再处理错误e，依次与定义比较每一个参数的类型
+                        ArrayList<Integer> paraList = visitFuncRParams(unaryExp.getFuncRParams());
+                        SymbolTable symbolTable = symbolTables.get(sValue.getParaTableId());
+                        int i = 0;
+                        for (Symbol ss:symbolTable.getDirectory().values()) {
+                            if (ss.judgeKindN() != paraList.get(i)) {
+                                int errorLine = t.getLine();
+                                errorDealer.errorE(errorLine);
+                                break;
+                            }
+                            i++;
+                            if (i >= paraList.size())break;
+                        }
                     }
                 }
+                return s.judgeKindN();
             }
         }
+        return -1;
     }
 
+    //TODO： 在我目前的实现中，这个函数没有什么作用，不过后续应该需要补全
     private void visitUnaryOp(UnaryOp unaryOp) {
 
     }
 
-    private void visitFuncRParams(FuncRParams funcRParams) {
-
+    private ArrayList<Integer> visitFuncRParams(FuncRParams funcRParams) {
+        if (funcRParams == null) return null;
+        ArrayList<Integer> l = new ArrayList<>();
+        for (Exp e: funcRParams.getExpArrayList()) {
+            l.add(visitExp(e));
+        }
+        return l;
     }
 
-    private void visitMulExp(MulExp mulExp) {
-        if (mulExp == null) return;
+    //TODO： mulExp中存的symbol并没有遍历，如果返回value，一定要重构分析方法
+    private int visitMulExp(MulExp mulExp) {
+        if (mulExp == null) return -1;
+        int t = -2;
         for (UnaryExp u : mulExp.getUnaryExpArrayList()) {
-            visitUnaryExp(u);
+            if(t == -2) { // 返回第一个unaryExp的类型即可
+                t = visitUnaryExp(u);
+            } else { //其他的也需要分析，可能会有错误出现
+                visitUnaryExp(u);
+            }
+        }
+        return t;
+    }
+
+    //TODO： addExp中存的symbol并没有遍历，如果返回value，一定要重构分析方法
+    private int visitAddExp(AddExp addExp) {
+        if (addExp == null) return -1;
+        int t = -2;
+        for (MulExp m : addExp.getMulExpArrayList()) {
+            if(t == -2) { // 返回第一个MulExp的类型即可
+                t = visitMulExp(m);
+            } else {//其他的也需要分析，可能会有错误出现
+                visitMulExp(m);
+            }
+        }
+        return t;
+    }
+
+    //TODO： relExp中存的symbol并没有遍历，如果返回value，一定要重构分析方法
+    private void visitRelExp(RelExp relExp) {
+        for (AddExp a: relExp.getAddExpArrayList()) {
+            visitAddExp(a);
         }
     }
 
-    private void visitAddExp(AddExp addExp) {
-        if (addExp == null) return;
-        for (MulExp m : addExp.getMulExpArrayList()) visitMulExp(m);
-    }
-
-    private void visitRelExp(RelExp relExp) {
-
-    }
-
+    //TODO： eqExp中存的symbol并没有遍历，如果返回value，一定要重构分析方法
     private void visitEqExp(EqExp eqExp) {
-
+        for (RelExp r: eqExp.getRelExpArrayList()) {
+            visitRelExp(r);
+        }
     }
 
+    //TODO： landExp中存的symbol并没有遍历，如果返回value，一定要重构分析方法
     private void visitLAndExp(LAndExp lAndExp) {
-
+        for (EqExp e: lAndExp.getEqExpArrayList()) {
+            visitEqExp(e);
+        }
     }
 
+    //TODO： lorExp中存的symbol并没有遍历，如果返回value，一定要重构分析方法
     private void visitLOrExp(LOrExp lOrExp) {
-
+        for (LAndExp l: lOrExp.getlAndExpArrayList()) {
+            visitLAndExp(l);
+        }
     }
 
+    //TODO： constExp是否要返回value以及要怎样返回需要考虑
     private void visitConstExp(ConstExp constExp) {
         visitAddExp(constExp.getAddExp());
     }

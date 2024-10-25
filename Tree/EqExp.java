@@ -27,4 +27,8 @@ public class EqExp extends Node {
     public void addSymbolList(Token token) {
         this.symbolList.add(token);
     }
+
+    public ArrayList<RelExp> getRelExpArrayList() {
+        return relExpArrayList;
+    }
 }

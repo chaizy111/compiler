@@ -32,4 +32,8 @@ public class AddExp extends Node {
     public ArrayList<MulExp> getMulExpArrayList() {
         return mulExpArrayList;
     }
+
+    public ArrayList<Token> getSymbolList() {
+        return symbolList;
+    }
 }

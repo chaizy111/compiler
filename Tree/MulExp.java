@@ -31,4 +31,8 @@ public class MulExp extends Node {
     public ArrayList<UnaryExp> getUnaryExpArrayList() {
         return unaryExpArrayList;
     }
+
+    public ArrayList<Token> getSymbolList() {
+        return symbolList;
+    }
 }

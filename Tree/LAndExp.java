@@ -20,4 +20,8 @@ public class LAndExp extends Node {
     public void addEqExpArrayList(EqExp eqExp) {
         this.eqExpArrayList.add(eqExp);
     }
+
+    public ArrayList<EqExp> getEqExpArrayList() {
+        return eqExpArrayList;
+    }
 }

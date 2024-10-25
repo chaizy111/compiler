@@ -19,4 +19,8 @@ public class LOrExp extends Node {
     public void addLAndExpArrayList(LAndExp lAndExp) {
         this.lAndExpArrayList.add(lAndExp);
     }
+
+    public ArrayList<LAndExp> getlAndExpArrayList() {
+        return lAndExpArrayList;
+    }
 }
