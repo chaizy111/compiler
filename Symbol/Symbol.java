@@ -1,6 +1,6 @@
-package Analysis.Symbol;
+package Symbol;
 
-import Analysis.Symbol.Value.Value;
+import Symbol.Value.Value;
 
 public class Symbol {
     private int tableId;

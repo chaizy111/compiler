@@ -1,4 +1,4 @@
-package Analysis.Symbol.Value;
+package Symbol.Value;
 
 public class ArrayValue extends Value {
 }

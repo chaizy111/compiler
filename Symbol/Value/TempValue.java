@@ -1,4 +1,4 @@
-package Analysis.Symbol.Value;
+package Symbol.Value;
 
 import java.util.ArrayList;
 

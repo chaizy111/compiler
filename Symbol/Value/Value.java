@@ -1,4 +1,4 @@
-package Analysis.Symbol.Value;
+package Symbol.Value;
 
 import Tree.ConstInitVal;
 import Tree.InitVal;

@@ -1,9 +1,12 @@
 package Analysis;
 
-import Analysis.Symbol.Symbol;
-import Analysis.Symbol.SymbolTable;
-import Analysis.Symbol.Value.FuncValue;
-import Analysis.Symbol.Value.Value;
+import Llvmir.IrModule;
+import Llvmir.ValueType.IrFunction;
+import Llvmir.ValueType.IrGlobalVariable;
+import Symbol.Symbol;
+import Symbol.SymbolTable;
+import Symbol.Value.FuncValue;
+import Symbol.Value.Value;
 import Analysis.Token.Token;
 import Analysis.Token.TokenType;
 import Tree.*;
@@ -23,6 +26,7 @@ public class Visitor {
     private ErrorDealer errorDealer;
     private int nowTableId;
     private int maxTableId;
+    private IrModule irModule;
 
     public Visitor(CompUnit compUnit, FileWriter outputfile, ErrorDealer errorDealer) {
         this.compUnit = compUnit;
@@ -31,13 +35,19 @@ public class Visitor {
         this.symbolTables = new LinkedHashMap<>();
         this.nowTableId = 0;
         this.maxTableId = 0;
+        this.irModule = new IrModule();
     }
 
+    //TODO：在各个visit中完善ir各个部分的构建，最后统一输出。visit需要返回分析得到的ir成分，最后统一输出（中间代码生成的主要逻辑）
+    //TODO:要注意的一些问题：1.对于全局变量中的常量表达式，在生成的 LLVM IR 中需要直接算出其具体的值，同时，也需要完成必要的类型转换
+    //TODO：2.对于局部变量，我们首先需要通过 alloca 指令分配一块内存，才能对其进行 load/store 操作
+    //TODO：将symbol相关方法拿出去（不重要，最后再做）
     public void visit() throws IOException {
         // 先建好第一个symbolTable，再visitCompUnit，最后输出
         newSymbolTable();
-        visitCompUnit(this.compUnit);
-        printSymbolTables();
+        visitCompUnit(compUnit);
+        //printSymbolTables();
+        printIrCode();
     }
 
     private void newSymbolTable() {
@@ -106,22 +116,33 @@ public class Visitor {
 
     private void visitCompUnit(CompUnit compUnit) {
         if (compUnit == null) return;
-        for (Decl d : compUnit.getDeclArrayList()) visitDecl(d);
-        for (FuncDef f : compUnit.getFuncDefArrayList()) visitFuncDef(f);
+        for (Decl d : compUnit.getDeclArrayList()) {
+            irModule.addGlobalVariable(visitDecl(d));
+        }
+        for (FuncDef f : compUnit.getFuncDefArrayList()) {
+            irModule.addFunction(visitFuncDef(f));
+        }
         visitMainFuncDef(compUnit.getMainFuncDef());
     }
 
-    private void visitDecl(Decl decl) {
-        if (decl == null) return;
-        if (decl instanceof ConstDecl) visitConstDecl((ConstDecl) decl);
-        else if (decl instanceof ValDecl) visitVarDecl((ValDecl) decl);
+    private IrGlobalVariable visitDecl(Decl decl) {
+        if (decl == null) return null;
+        if (decl instanceof ConstDecl) {
+            return visitConstDecl((ConstDecl) decl);
+        } else if (decl instanceof ValDecl) {
+            return visitVarDecl((ValDecl) decl);
+        } else {
+            return null;
+        }
     }
 
-    private void visitConstDecl(ConstDecl constDecl) {
-        if (constDecl == null) return;
+    private IrGlobalVariable visitConstDecl(ConstDecl constDecl) {
+        IrGlobalVariable globalVariable = new IrGlobalVariable();
+        if (constDecl == null) return null;
         for (ConstDef c : constDecl.getConstDefList()) {
             visitConstDef(c, constDecl.getbType());
         }
+        return globalVariable;
     }
 
     private void visitConstDef(ConstDef constDef, TokenType.tokenType bType) {
@@ -160,11 +181,13 @@ public class Visitor {
         return value;
     }
 
-    private void visitVarDecl(ValDecl valDecl) {
-        if (valDecl == null) return;
+    private IrGlobalVariable visitVarDecl(ValDecl valDecl) {
+        IrGlobalVariable globalVariable = new IrGlobalVariable();
+        if (valDecl == null) return null;
         for (ValDef v : valDecl.getVarDefList()) {
             visitVarDef(v, valDecl.getbType());
         }
+        return globalVariable;
     }
 
     private void visitVarDef(ValDef valDef, TokenType.tokenType bType) {
@@ -204,8 +227,9 @@ public class Visitor {
         return value;
     }
 
-    private void visitFuncDef(FuncDef funcDef) {
-        if (funcDef == null) return;
+    private IrFunction visitFuncDef(FuncDef funcDef) {
+        IrFunction function = new IrFunction();
+        if (funcDef == null) return null;
         // 遇到funcDef，要先把函数名这个symbol放到当前的symbolTable中，
         Symbol s = new Symbol(nowTableId, funcDef.getIdent().getString());
         s.setType(2);
@@ -229,6 +253,8 @@ public class Visitor {
         visitFuncBlock(funcDef.getBlock(), bType == 2);
         // 最后再返回上一级symbolTable（即将nowTableId改成fatherTableId）
         returnFatherTable();
+
+        return function;
     }
 
     private void visitMainFuncDef(MainFuncDef mainFuncDef) {
@@ -571,5 +597,12 @@ public class Visitor {
 
     public void printSymbolTables() throws IOException {
         for(SymbolTable s:symbolTables.values()) s.printSymbolTable(outputfile);
+    }
+
+    private void printIrCode() throws IOException {
+        ArrayList<String> code = irModule.output();
+        for (String s : code) {
+            outputfile.write(s);
+        }
     }
 }

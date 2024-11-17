@@ -1,9 +1,7 @@
-package Analysis.Symbol;
+package Symbol;
 
-import javax.imageio.IIOException;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.util.HashMap;
 import java.util.LinkedHashMap;
 
 public class SymbolTable {
