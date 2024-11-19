@@ -1,13 +1,14 @@
 package Analysis;
 
 import Llvmir.IrModule;
-import Llvmir.Type.IrCharTy;
-import Llvmir.Type.IrIntegerTy;
-import Llvmir.Type.IrType;
+import Llvmir.Type.*;
 import Llvmir.ValueType.Constant.IrConstant;
 import Llvmir.ValueType.Constant.IrConstantArray;
 import Llvmir.ValueType.Constant.IrConstantVal;
-import Llvmir.ValueType.IrFunction;
+import Llvmir.ValueType.Function.IrArgument;
+import Llvmir.ValueType.Function.IrFunction;
+import Llvmir.ValueType.Instruction.IrRet;
+import Llvmir.ValueType.IrBasicBlock;
 import Llvmir.ValueType.IrGlobalVariable;
 import Symbol.Symbol;
 import Symbol.SymbolTable;
@@ -130,7 +131,7 @@ public class Visitor {
         for (FuncDef f : compUnit.getFuncDefArrayList()) {
             irModule.addFunction(visitFuncDef(f));
         }
-        visitMainFuncDef(compUnit.getMainFuncDef());
+        irModule.addFunction(visitMainFuncDef(compUnit.getMainFuncDef()));
     }
 
     private ArrayList<IrGlobalVariable> visitDecl(Decl decl) {
@@ -342,24 +343,45 @@ public class Visitor {
         }
         // 再新建一个symbolTable，
         // 注意函数的block与普通block的不同，函数的block需要在上一层建立，因为需要将参数进行存储，普通block在visitBlock函数中建立即可
-        newSymbolTable();
+        newSymbolTable(); // 进入新符号表的同时配置IrFunction
+        function.setName("@" + s.getSymbolName());
+        IrFunctionTy type = new IrFunctionTy();
+        if(s.getBtype() == 0) {
+            type.setFuncType(new IrIntegerTy());
+        } else if (s.getBtype() == 1) {
+            type.setFuncType(new IrCharTy());
+        } else {
+            type.setFuncType(new IrVoidTy());
+        }
+        function.setType(type);
         // 进行后续的分析，这里返回的value存储了参数相关的信息
         Value v = visitFuncFParams(funcDef.getFuncFParams());
         // 把存储参数的符号表的编号传给s
         s.setValue(v);
+        // 从v中取出关于参数的描述，给每个参数分配临时寄存器之后加到irFunction中
+        ArrayList<IrArgument> temp = ((FuncValue) v).getArguments();
+        for(int i = 0; i < temp.size(); i++) {
+            temp.get(i).setRank(function.getNowRank());
+        }
+        function.setArguments(temp);
         // 分析后边的block，需要将函数是否为void类型传入函数以供后续判断
-        visitFuncBlock(funcDef.getBlock(), bType == 2);
+        function.setIrBlock(visitFuncBlock(funcDef.getBlock(), bType));
         // 最后再返回上一级symbolTable（即将nowTableId改成fatherTableId）
         returnFatherTable();
-
         return function;
     }
 
-    private void visitMainFuncDef(MainFuncDef mainFuncDef) {
-        if (mainFuncDef == null) return;
+    private IrFunction visitMainFuncDef(MainFuncDef mainFuncDef) {
+        if (mainFuncDef == null) return null;
+        IrFunction function = new IrFunction();
         newSymbolTable();
-        visitFuncBlock(mainFuncDef.getBlock(), false);
+        IrFunctionTy type = new IrFunctionTy();
+        type.setFuncType(new IrIntegerTy());
+        function.setType(type); // 设置functionType为Integer
+        function.setName("@main");
+        function.setIrBlock(visitFuncBlock(mainFuncDef.getBlock(), 0)); //将block存储起来
         returnFatherTable();
+        return function;
     }
 
     private int visitFuncType(FuncType funcType) {
@@ -371,17 +393,20 @@ public class Visitor {
     }
 
     private Value visitFuncFParams(FuncFParams funcFParams) {
-        if (funcFParams == null || funcFParams.getFuncFParamArrayList().isEmpty())
-            return new FuncValue(nowTableId, 0);
-        for (FuncFParam f:funcFParams.getFuncFParamArrayList()) {
-            visitFuncFParam(f);
+        FuncValue fv = new FuncValue(nowTableId, 0);
+        if (funcFParams == null || funcFParams.getFuncFParamArrayList().isEmpty()) {
+            return fv;
         }
+        for (FuncFParam f:funcFParams.getFuncFParamArrayList()) {
+            fv.addArgument(visitFuncFParam(f));
+        }
+        fv.setParaNum(fv.getArguments().size());
         //返回一个存储函数参数信息的符号表的序号以及函数参数的个数的value对象
-        return new FuncValue(nowTableId, funcFParams.getFuncFParamArrayList().size());
+        return fv;
     }
 
-    private void visitFuncFParam(FuncFParam funcFParam) {
-        if (funcFParam == null) return;
+    private IrArgument visitFuncFParam(FuncFParam funcFParam) {
+        if (funcFParam == null) return null;
         // 配置symbol
         Symbol s = new Symbol(nowTableId, funcFParam.getIdent().getString());
         if (funcFParam.isArray()) s.setType(1);
@@ -393,63 +418,86 @@ public class Visitor {
         if(isDuplicateSymbol(s.getSymbolName())) {
             int errorLine = funcFParam.getIdent().getLine();
             errorDealer.errorB(errorLine);
-            return;
+        } else {
+            // 配置完成并实现错误处理后，在最后把symbol加到表中
+            addSymbol(s);
         }
-        // 配置完成并实现错误处理后，在最后把symbol加到表中
-        addSymbol(s);
+        IrArgument argument = new IrArgument();
+        IrPointerTy type = new IrPointerTy();
+        if (s.getBtype() == 0) {
+            type.setType(new IrIntegerTy());
+        } else {
+            type.setType(new IrCharTy());
+        }
+        argument.setArgumentType(type);
+        argument.setName(s.getSymbolName());
+        return argument;
     }
 
     // 由于处理逻辑不同，所以把不同的block分开
-    private void visitBlock(Block block, boolean isInForBlock, boolean isInVoidFunc) {
+    private void visitBlock(Block block, boolean isInForBlock, int funcType) {
         // 多种情况，循环块与非循环块，是否为void函数中的块
         if (block == null) return;
         newSymbolTable();
         for (BlockItem b : block.getBlockItemArrayList()) {
-            visitBlockItem(b, isInForBlock, isInVoidFunc);
+            visitBlockItem(b, isInForBlock, funcType);
         }
         returnFatherTable();
     }
 
-    private void visitFuncBlock(Block block, boolean isVoid) {
-        if (block == null) return;
+    private IrBasicBlock visitFuncBlock(Block block, int funcType) {
+        if (block == null) return null;
+        IrBasicBlock basicBlock = new IrBasicBlock();
         ReturnStmt returnStmt = null;
         for (BlockItem b : block.getBlockItemArrayList()) {
             if (b instanceof ReturnStmt) { // returnStmt单独处理
                 returnStmt = (ReturnStmt) b;
                 // 错误处理
-                if (isVoid) {
+                if (funcType == 2) {
                     if (returnStmt.getExp() != null) {
                         int errorLine = returnStmt.getLine();
                         errorDealer.errorF(errorLine);
                     }
                 }
+                IrRet ret = new IrRet(); // 添加返回指令
+                if (funcType == 0) {
+                    ret.setType(new IrIntegerTy());
+                    ret.setResult(returnStmt.getExp().getAddExp().getResult());
+                } else if (funcType == 1) {
+                    ret.setType(new IrCharTy());
+                    ret.setResult(returnStmt.getExp().getAddExp().getResult());
+                } else {
+                    ret.setType(new IrVoidTy());
+                }
+                basicBlock.addInstruction(ret);
             } else if (b instanceof Decl) {
                 visitDecl((Decl) b);
             } else if (b instanceof Stmt) {
-                visitStmt((Stmt) b, false, isVoid);
+                visitStmt((Stmt) b, false, funcType);
             }
         }
         // 错误处理
-        if (!isVoid && returnStmt == null) { //不是void型函数且没有返回语句
+        if (funcType != 2 && returnStmt == null) { //不是void型函数且没有返回语句
             int errorLine = block.getEndLine();
             errorDealer.errorG(errorLine);
         }
+        return basicBlock;
     }
 
-    private void visitBlockItem(BlockItem blockItem, boolean isInForBlock, boolean isInVoidFunc) {
+    private void visitBlockItem(BlockItem blockItem, boolean isInForBlock, int funcType) {
         if (blockItem == null) return;
         if (blockItem instanceof Decl) visitDecl((Decl) blockItem);
-        else visitStmt((Stmt) blockItem, isInForBlock, isInVoidFunc);
+        else visitStmt((Stmt) blockItem, isInForBlock, funcType);
     }
 
-    private void visitStmt(Stmt stmt, boolean isInForBlock, boolean isInVoidFunc) {
+    private void visitStmt(Stmt stmt, boolean isInForBlock, int funcType) {
         if (stmt == null) return;
         // 由于要对for有关block进行判断，来看是否出现m错，设置了isInForBlock变量，这个变量的相关逻辑比较绕，
         // 主要就是如果是在for的stmt是block型，则在visitBlock时就将这个属性设为true，之后这个属性便会层层下传，直到for的block分析结束
         // 还要对是否是在void函数中进行判断，如果是在void函数中，那if，for，以及return语句就需要注意进行报错，所以需要传递isInVoidFunc参数
-        if (stmt instanceof IfStmt) visitIf((IfStmt) stmt, isInForBlock, isInVoidFunc);
-        else if (stmt instanceof For) visitFor((For) stmt, isInVoidFunc);
-        else if (stmt instanceof ReturnStmt) visitReturnStmt((ReturnStmt) stmt, isInVoidFunc);
+        if (stmt instanceof IfStmt) visitIf((IfStmt) stmt, isInForBlock, funcType);
+        else if (stmt instanceof For) visitFor((For) stmt, funcType);
+        else if (stmt instanceof ReturnStmt) visitReturnStmt((ReturnStmt) stmt, funcType);
         else if (stmt instanceof PrintfStmt) visitPrintfStmt((PrintfStmt) stmt);
         else if (stmt instanceof LValStmt) visitLValStmt((LValStmt) stmt);
         else if (stmt.getbOrC() != null) { // 处理break和continue
@@ -458,31 +506,31 @@ public class Visitor {
                 errorDealer.errorM(errorLine);
             }
         } else if (stmt.getB() != null) {
-            visitBlock(stmt.getB(), isInForBlock, isInVoidFunc);
+            visitBlock(stmt.getB(), isInForBlock, funcType);
         } else if (stmt.getE() != null) {
             visitExp(stmt.getE()); //
         }
     }
 
-    private void visitIf(IfStmt ifStmt, boolean isInForBlock, boolean isInVoidFunc) {
+    private void visitIf(IfStmt ifStmt, boolean isInForBlock, int funcType) {
         if (ifStmt == null) return;
         visitCond(ifStmt.getC()); //TODO：cond语句是否要有返回信息，这仍是一个需要考虑的问题
-        visitStmt(ifStmt.getS1(), isInForBlock, isInVoidFunc);
-        if (ifStmt.getS2() != null) visitStmt(ifStmt.getS2(), isInForBlock, isInVoidFunc);
+        visitStmt(ifStmt.getS1(), isInForBlock, funcType);
+        if (ifStmt.getS2() != null) visitStmt(ifStmt.getS2(), isInForBlock, funcType);
     }
 
-    private void visitFor(For f, boolean isInVoidFunc) {
+    private void visitFor(For f, int funcType) {
         if (f == null) return;
         visitForStmt(f.getForStmt1());
         visitCond(f.getC());//TODO：cond语句是否要有返回信息，这仍是一个需要考虑的问题
         visitForStmt(f.getForStmt2());
-        if (f.getS().getB() != null) visitBlock(f.getS().getB(), true, isInVoidFunc);
-        else visitStmt(f.getS(), false, isInVoidFunc);
+        if (f.getS().getB() != null) visitBlock(f.getS().getB(), true, funcType);
+        else visitStmt(f.getS(), false, funcType);
     }
 
-    private void visitReturnStmt(ReturnStmt returnStmt, boolean isInVoidFunc) {
+    private void visitReturnStmt(ReturnStmt returnStmt, int funcType) {
         if (returnStmt == null) return;
-        if (isInVoidFunc) { // 如果在void函数中，就报错
+        if (funcType == 2) { // 如果在void函数中，就报错
             if (returnStmt.getExp() != null) {
                 int errorLine = returnStmt.getLine();
                 errorDealer.errorF(errorLine);

@@ -1,6 +1,6 @@
 package Llvmir;
 
-import Llvmir.ValueType.IrFunction;
+import Llvmir.ValueType.Function.IrFunction;
 import Llvmir.ValueType.IrGlobalVariable;
 
 import java.util.ArrayList;
