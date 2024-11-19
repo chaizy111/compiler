@@ -22,4 +22,8 @@ public class ConstExp extends Node {
     public AddExp getAddExp() {
         return addExp;
     }
+
+    public int getResult() {
+        return addExp.getResult();
+    }
 }

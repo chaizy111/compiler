@@ -1,6 +1,7 @@
 package Tree;
 
 import Analysis.Token.Token;
+import Analysis.Token.TokenType;
 
 import java.io.FileWriter;
 import java.io.IOException;
@@ -64,5 +65,15 @@ public class UnaryExp extends Node {
 
     public FuncRParams getFuncRParams() {
         return funcRParams;
+    }
+
+    public int getResult() {
+        if(unaryOp != null) {
+            return unaryOp.getToken().getType() == TokenType.tokenType.PLUS ? unaryExp.getResult() : -unaryExp.getResult();
+        } else if (primaryExp != null) {
+            return primaryExp.getResult();
+        } else {
+            return 0;
+        }
     }
 }

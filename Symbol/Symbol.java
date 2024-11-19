@@ -8,6 +8,7 @@ public class Symbol {
     private int type;// 0 -> var, 1 -> array, 2 -> func
     private int btype;// 0 -> int, 1 -> char, 2-> void
     private boolean isConst;
+    private int arraySize;
     private Value value;
 
     public Symbol(int tableId, String symbolName){
@@ -15,6 +16,7 @@ public class Symbol {
         this.symbolName = symbolName;
         this.type = -1;
         this.btype = -1;
+        this.arraySize = 0;
         this.isConst = false;
         this.value = null;
     }
@@ -33,6 +35,14 @@ public class Symbol {
 
     public void setValue(Value value) {
         this.value = value;
+    }
+
+    public void setArraySize(int size) {
+        this.arraySize = size;
+    }
+
+    public int getArraySize() {
+        return arraySize;
     }
 
     public String getSymbolName() {

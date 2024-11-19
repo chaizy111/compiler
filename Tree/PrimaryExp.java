@@ -54,4 +54,16 @@ public class PrimaryExp extends Node {
     public Number getNumber() {
         return number;
     }
+
+    public int getResult() {
+        if(char1 != null) {
+            return char1.getResult();
+        } else if (number != null) {
+            return Integer.parseInt(number.getToken().getString());
+        } else if (exp != null) {
+            return exp.getAddExp().getResult();
+        } else {
+            return 0;
+        }
+    }
 }

@@ -6,10 +6,10 @@ import java.util.ArrayList;
 import java.util.LinkedList;
 
 public class IrValue { // TODO: IrValue,IrUse,IrUser是与代码优化相关的，代码生成是可以先不做
-    private IrType type;
-    private String name;
-    private LinkedList<IrUse> useList;
-    private LinkedList<IrUser> userList;
+//    private IrType type;
+//    private String name;
+//    private LinkedList<IrUse> useList;
+//    private LinkedList<IrUser> userList;
 
     //protected:
     //    TypePtr _type;

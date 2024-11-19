@@ -1,14 +1,22 @@
 package Analysis;
 
 import Llvmir.IrModule;
+import Llvmir.Type.IrCharTy;
+import Llvmir.Type.IrIntegerTy;
+import Llvmir.Type.IrType;
+import Llvmir.ValueType.Constant.IrConstant;
+import Llvmir.ValueType.Constant.IrConstantArray;
+import Llvmir.ValueType.Constant.IrConstantVal;
 import Llvmir.ValueType.IrFunction;
 import Llvmir.ValueType.IrGlobalVariable;
 import Symbol.Symbol;
 import Symbol.SymbolTable;
+import Symbol.Value.ArrayValue;
 import Symbol.Value.FuncValue;
 import Symbol.Value.Value;
 import Analysis.Token.Token;
 import Analysis.Token.TokenType;
+import Symbol.Value.VarValue;
 import Tree.*;
 import Error.ErrorDealer;
 import Tree.Character;
@@ -125,7 +133,8 @@ public class Visitor {
         visitMainFuncDef(compUnit.getMainFuncDef());
     }
 
-    private IrGlobalVariable visitDecl(Decl decl) {
+    private ArrayList<IrGlobalVariable> visitDecl(Decl decl) {
+        //TODO：block中的Decl与GlobalVariable声明中的VisitDecl不可复用，需要拿出来再实现一个
         if (decl == null) return null;
         if (decl instanceof ConstDecl) {
             return visitConstDecl((ConstDecl) decl);
@@ -136,22 +145,24 @@ public class Visitor {
         }
     }
 
-    private IrGlobalVariable visitConstDecl(ConstDecl constDecl) {
-        IrGlobalVariable globalVariable = new IrGlobalVariable();
+    private ArrayList<IrGlobalVariable> visitConstDecl(ConstDecl constDecl) {
+        ArrayList<IrGlobalVariable> res = new ArrayList<>();
         if (constDecl == null) return null;
         for (ConstDef c : constDecl.getConstDefList()) {
-            visitConstDef(c, constDecl.getbType());
+            res.add(visitConstDef(c, constDecl.getbType()));
         }
-        return globalVariable;
+        return res;
     }
 
-    private void visitConstDef(ConstDef constDef, TokenType.tokenType bType) {
-        if (constDef == null) return;
+    private IrGlobalVariable visitConstDef(ConstDef constDef, TokenType.tokenType bType) {
+        if (constDef == null) return null;
         // 配置symbol
         Symbol s = new Symbol(nowTableId, constDef.getIdent().getString());
         if(constDef.getConstExp() == null) s.setType(0);
-        else { //TODO: 如果是数组，那么中括号里边的信息也应该传入符号表中，这里还没实现
+        else {
+            //TODO：实验中所有中括号中的表达式全部为常量表达式，所以可以为constDef设置一个计算方法，直接得到其结果后存储起来，同理后边的Initval
             visitConstExp(constDef.getConstExp());
+            s.setArraySize(constDef.getConstExp().getResult());
             s.setType(1);
         }
         if (bType.equals(TokenType.tokenType.INTTK)) s.setBtype(0);
@@ -162,41 +173,83 @@ public class Visitor {
         if(isDuplicateSymbol(s.getSymbolName())) {
             int errorLine = constDef.getIdent().getLine();
             errorDealer.errorB(errorLine);
-            return;
+        } else {
+            // 配置完成并实现错误处理后，在最后把symbol加到表中
+            addSymbol(s);
         }
-        // 配置完成并实现错误处理后，在最后把symbol加到表中
-        addSymbol(s);
+        //配置IrGlobalVariable
+        IrGlobalVariable irGlobalVariable = new IrGlobalVariable("@" + s.getSymbolName());
+        irGlobalVariable.setIsArray(s.getType() == 1);
+        IrType t;
+        if (s.getBtype() == 0) {
+            t = new IrIntegerTy();
+        } else {
+            t = new IrCharTy();
+        }
+        irGlobalVariable.setType(t);
+        if (s.getArraySize() == 0) { // 非数组型
+            IrConstant constant = new IrConstantVal(((VarValue) s.getValue()).getItem());
+            irGlobalVariable.setConstant(constant);
+        } else { //数组型
+            ArrayList<Integer> temp = ((ArrayValue) s.getValue()).getArray(s.getArraySize());
+            ArrayList<IrConstantVal> arrays = new ArrayList<>();
+            for (Integer i:temp) {
+                IrConstantVal c = new IrConstantVal(i);
+                arrays.add(c);
+            }
+            IrConstant constant = new IrConstantArray(arrays);
+            constant.setType(t);
+            irGlobalVariable.setConstant(constant);
+        }
+        irGlobalVariable.setArraySize(s.getArraySize());
+        return irGlobalVariable;
     }
 
     //这里的分析先将等号右边作为一个整体传入Value，然后value保存在左边符号的符号表内，之后再对右边进行分析
-    private Value visitConstInitVal(ConstInitVal constInitVal) { // TODO：可能需要对value进行更多的处理
-        Value value = new Value();
-        value.setConstInitVal(constInitVal);
-        if (constInitVal.getConstExp() != null) visitConstExp(constInitVal.getConstExp());
-        else if (!constInitVal.getConstExpArrayList().isEmpty()) {
+    private Value visitConstInitVal(ConstInitVal constInitVal) {
+        // TODO：已经实现了对于Initval的存储，现在需要优化代码实现，现在的逻辑有些冗余
+        if (constInitVal.getConstExp() != null) { //只有1个exp
+            visitConstExp(constInitVal.getConstExp());
+            VarValue value = new VarValue();
+            value.setConstInitVal(constInitVal);
+            value.setItem(constInitVal.getConstExp().getResult());
+        } else if (!constInitVal.getConstExpArrayList().isEmpty()) { // 多个Exp
+            ArrayValue value = new ArrayValue();
+            value.setConstInitVal(constInitVal);
             for (ConstExp c: constInitVal.getConstExpArrayList()) {
                 visitConstExp(c);
+                value.addItem(c.getResult());
             }
+            return value;
+        } else { //String型
+            ArrayValue value = new ArrayValue();
+            value.setConstInitVal(constInitVal);
+            String s = constInitVal.getStringConst().getString();
+            for (java.lang.Character c: s.toCharArray()) {
+                value.addItem(c);
+            }
+            return value;
         }
-        return value;
+        return null;
     }
 
-    private IrGlobalVariable visitVarDecl(ValDecl valDecl) {
-        IrGlobalVariable globalVariable = new IrGlobalVariable();
+    private ArrayList<IrGlobalVariable> visitVarDecl(ValDecl valDecl) {
+        ArrayList<IrGlobalVariable> res = new ArrayList<>();
         if (valDecl == null) return null;
         for (ValDef v : valDecl.getVarDefList()) {
-            visitVarDef(v, valDecl.getbType());
+            res.add(visitVarDef(v, valDecl.getbType()));
         }
-        return globalVariable;
+        return res;
     }
 
-    private void visitVarDef(ValDef valDef, TokenType.tokenType bType) {
-        if (valDef == null) return;
+    private IrGlobalVariable visitVarDef(ValDef valDef, TokenType.tokenType bType) {
+        if (valDef == null) return null;
         // 配置symbol
         Symbol s = new Symbol(nowTableId, valDef.getIdent().getString());
         if(valDef.getConstExp() == null) s.setType(0);
         else {//TODO: 如果是数组，那么中括号里边的信息也应该传入符号表中，这里还没实现
             visitConstExp(valDef.getConstExp());
+            s.setArraySize(valDef.getConstExp().getResult());
             s.setType(1);
         }
         if (bType.equals(TokenType.tokenType.INTTK)) s.setBtype(0);
@@ -208,23 +261,68 @@ public class Visitor {
         if(isDuplicateSymbol(s.getSymbolName())) {
             int errorLine = valDef.getIdent().getLine();
             errorDealer.errorB(errorLine);
-            return;
+        } else {
+            // 配置完成并实现错误处理后，在最后把symbol加到表中
+            addSymbol(s);
         }
-        // 配置完成并实现错误处理后，在最后把symbol加到表中
-        addSymbol(s);
+        //配置IrGlobalVariable
+        IrGlobalVariable irGlobalVariable = new IrGlobalVariable("@" + s.getSymbolName());
+        irGlobalVariable.setIsArray(s.getType() == 1);
+        IrType t;
+        if (s.getBtype() == 0) {
+            t = new IrIntegerTy();
+        } else {
+            t = new IrCharTy();
+        }
+        irGlobalVariable.setType(t);
+        if (s.getValue() != null) {
+            if (s.getArraySize() == 0) { // 非数组型
+                IrConstant constant = new IrConstantVal(((VarValue) s.getValue()).getItem());
+                irGlobalVariable.setConstant(constant);
+            } else { //数组型
+                ArrayList<Integer> temp = ((ArrayValue) s.getValue()).getArray(s.getArraySize());
+                ArrayList<IrConstantVal> arrays = new ArrayList<>();
+                for (Integer i:temp) {
+                    IrConstantVal c = new IrConstantVal(i);
+                    arrays.add(c);
+                }
+                IrConstant constant = new IrConstantArray(arrays);
+                constant.setType(t);
+                irGlobalVariable.setConstant(constant);
+            }
+        } else {
+            irGlobalVariable.setConstant(null);
+        }
+        irGlobalVariable.setArraySize(s.getArraySize());
+        return irGlobalVariable;
     }
 
     //与constInitVal逻辑一致
-    private Value visitInitVal(InitVal initVal) { // TODO：可能需要对value进行更多的处理
-        Value value = new Value();
-        value.setInitVal(initVal);
-        if (initVal.getExp() != null) visitExp(initVal.getExp());
-        else if (!initVal.getExpArrayList().isEmpty()) {
+    private Value visitInitVal(InitVal initVal) {
+        // TODO：已经实现了对于Initval的存储，现在需要优化代码实现，现在的逻辑有些冗余
+        if (initVal.getExp() != null) { // 只有一个Exp
+            visitExp(initVal.getExp());
+            VarValue value = new VarValue();
+            value.setInitVal(initVal);
+            value.setItem(initVal.getExp().getAddExp().getResult());
+        } else if (!initVal.getExpArrayList().isEmpty()) { // 多个Exp
+            ArrayValue value = new ArrayValue();
+            value.setInitVal(initVal);
             for (Exp e: initVal.getExpArrayList()) {
                 visitExp(e);
+                value.addItem(e.getAddExp().getResult());
             }
+            return value;
+        } else { //String型
+            ArrayValue value = new ArrayValue();
+            value.setInitVal(initVal);
+            String s = initVal.getStringConst().getString();
+            for (java.lang.Character c: s.toCharArray()) {
+                value.addItem(c);
+            }
+            return value;
         }
-        return value;
+        return null;
     }
 
     private IrFunction visitFuncDef(FuncDef funcDef) {

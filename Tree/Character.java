@@ -25,4 +25,8 @@ public class Character extends Node{
     public void setToken(Token token) {
         this.token = token;
     }
+
+    public int getResult() {
+        return token.getString().indexOf(0);
+    }
 }

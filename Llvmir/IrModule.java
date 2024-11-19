@@ -14,8 +14,8 @@ public class IrModule implements IrNode{
         irFunctions = new ArrayList<>();
     }
 
-    public void addGlobalVariable(IrGlobalVariable globalVariable) {
-        irGlobalVariables.add(globalVariable);
+    public void addGlobalVariable(ArrayList<IrGlobalVariable> globalVariable) {
+        irGlobalVariables.addAll(globalVariable);
     }
 
     public void addFunction(IrFunction function) {

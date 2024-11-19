@@ -36,4 +36,15 @@ public class AddExp extends Node {
     public ArrayList<Token> getSymbolList() {
         return symbolList;
     }
+
+    public int getResult() {
+        int sum = !mulExpArrayList.isEmpty() ? mulExpArrayList.get(0).getResult() : 0;
+        for(int i = 1; i < mulExpArrayList.size(); i++) {
+            if(i - 1 < symbolList.size()) {
+                sum += symbolList.get(i - 1).getType() == TokenType.tokenType.PLUS ?
+                        mulExpArrayList.get(i).getResult() : -mulExpArrayList.get(i).getResult();
+            }
+        }
+        return sum;
+    }
 }

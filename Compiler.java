@@ -9,7 +9,8 @@ public class Compiler {
     public static void main(String[] args) throws IOException {
         InputStream input = new BufferedInputStream(new FileInputStream("testfile.txt"));
 //        FileWriter output = new FileWriter("lexer.txt");
-        FileWriter output = new FileWriter("symbol.txt");
+//        FileWriter output = new FileWriter("symbol.txt");
+        FileWriter output = new FileWriter("llvm_ir.txt");
         FileWriter errorOutput = new FileWriter("error.txt");
 
         ErrorDealer errorDealer = new ErrorDealer(errorOutput);
