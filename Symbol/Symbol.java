@@ -1,5 +1,6 @@
 package Symbol;
 
+import Llvmir.IrValue;
 import Symbol.Value.Value;
 
 public class Symbol {
@@ -10,6 +11,7 @@ public class Symbol {
     private boolean isConst;
     private int arraySize;
     private Value value;
+    private IrValue irValue;
 
     public Symbol(int tableId, String symbolName){
         this.tableId = tableId;
@@ -41,6 +43,10 @@ public class Symbol {
         this.arraySize = size;
     }
 
+    public void setIrValue(IrValue irValue) {
+        this.irValue = irValue;
+    }
+
     public int getArraySize() {
         return arraySize;
     }
@@ -63,6 +69,10 @@ public class Symbol {
 
     public Value getValue() {
         return value;
+    }
+
+    public IrValue getIrValue() {
+        return irValue;
     }
 
     public String judgeKind() {

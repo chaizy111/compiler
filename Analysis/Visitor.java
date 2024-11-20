@@ -1,13 +1,17 @@
 package Analysis;
 
 import Llvmir.IrModule;
+import Llvmir.IrValue;
 import Llvmir.Type.*;
 import Llvmir.ValueType.Constant.IrConstant;
 import Llvmir.ValueType.Constant.IrConstantArray;
 import Llvmir.ValueType.Constant.IrConstantVal;
 import Llvmir.ValueType.Function.IrArgument;
 import Llvmir.ValueType.Function.IrFunction;
+import Llvmir.ValueType.Instruction.IrAlloca;
+import Llvmir.ValueType.Instruction.IrInstruction;
 import Llvmir.ValueType.Instruction.IrRet;
+import Llvmir.ValueType.Instruction.IrStore;
 import Llvmir.ValueType.IrBasicBlock;
 import Llvmir.ValueType.IrGlobalVariable;
 import Symbol.Symbol;
@@ -48,8 +52,10 @@ public class Visitor {
     }
 
     //TODO：在各个visit中完善ir各个部分的构建，最后统一输出。visit需要返回分析得到的ir成分，最后统一输出（中间代码生成的主要逻辑）
-    //TODO:要注意的一些问题：1.对于全局变量中的常量表达式，在生成的 LLVM IR 中需要直接算出其具体的值，同时，也需要完成必要的类型转换
+    //TODO:要注意的一些问题：1.对于全局变量中的常量表达式，在生成的 LLVM IR 中需要直接算出其具体的值
     //TODO：2.对于局部变量，我们首先需要通过 alloca 指令分配一块内存，才能对其进行 load/store 操作
+    //TODO：3.对于局部变量，要注意类型转换的情况
+    //TODO：4.修改各个exp中getResult的逻辑，需要符号表的参与
     //TODO：将symbol相关方法拿出去（不重要，最后再做）
     public void visit() throws IOException {
         // 先建好第一个symbolTable，再visitCompUnit，最后输出
@@ -123,6 +129,20 @@ public class Visitor {
         return false;
     }
 
+    public String getRegisterByName(String symbolName) { //通过符号名向上找到其存储的寄存器名，生成中间代码时用
+        int index = nowTableId;
+        while (index != 0) { // 一直往上找直到0号符号表
+            SymbolTable s = symbolTables.get(index);
+            for (String string : s.getDirectory().keySet()) {
+                if (string.equals(symbolName)) {
+                    return s.getDirectory().get(symbolName).getIrValue().getRegisterName();
+                }
+            }
+            index = s.getFatherId();
+        }
+        return null;
+    }
+
     private void visitCompUnit(CompUnit compUnit) {
         if (compUnit == null) return;
         for (Decl d : compUnit.getDeclArrayList()) {
@@ -135,7 +155,7 @@ public class Visitor {
     }
 
     private ArrayList<IrGlobalVariable> visitDecl(Decl decl) {
-        //TODO：block中的Decl与GlobalVariable声明中的VisitDecl不可复用，需要拿出来再实现一个
+        //原visitDecl，用于全局声明语句的分析
         if (decl == null) return null;
         if (decl instanceof ConstDecl) {
             return visitConstDecl((ConstDecl) decl);
@@ -146,11 +166,32 @@ public class Visitor {
         }
     }
 
+    private ArrayList<IrInstruction> visitDecl(Decl decl, IrFunction nowFunction) {
+        //一个新的visitDecl，区别与原来的，用于局部声明语句的分析
+        if (decl == null) return null;
+        if (decl instanceof ConstDecl) {
+            return visitConstDecl((ConstDecl) decl, nowFunction);
+        } else if (decl instanceof ValDecl) {
+            return visitVarDecl((ValDecl) decl, nowFunction);
+        } else {
+            return null;
+        }
+    }
+
     private ArrayList<IrGlobalVariable> visitConstDecl(ConstDecl constDecl) {
         ArrayList<IrGlobalVariable> res = new ArrayList<>();
         if (constDecl == null) return null;
         for (ConstDef c : constDecl.getConstDefList()) {
             res.add(visitConstDef(c, constDecl.getbType()));
+        }
+        return res;
+    }
+
+    private ArrayList<IrInstruction> visitConstDecl(ConstDecl constDecl, IrFunction nowFunction) {
+        ArrayList<IrInstruction> res = new ArrayList<>();
+        if (constDecl == null) return null;
+        for (ConstDef c : constDecl.getConstDefList()) {
+            res.addAll(visitConstDef(c, constDecl.getbType(), nowFunction));
         }
         return res;
     }
@@ -203,7 +244,42 @@ public class Visitor {
             irGlobalVariable.setConstant(constant);
         }
         irGlobalVariable.setArraySize(s.getArraySize());
+        irGlobalVariable.setRegisterName("@" + s.getSymbolName());
+        s.setIrValue(irGlobalVariable); //配置完成irGlobalVariable后将其加到符号的属性中
         return irGlobalVariable;
+    }
+
+    private ArrayList<IrInstruction> visitConstDef(ConstDef constDef, TokenType.tokenType bType, IrFunction nowFunction) {
+        ArrayList<IrInstruction> instructions = new ArrayList<>();
+        if (constDef == null) return null;
+        // 配置symbol
+        Symbol s = new Symbol(nowTableId, constDef.getIdent().getString());
+        if(constDef.getConstExp() == null) s.setType(0);
+        else {
+            instructions.addAll(visitConstExp(constDef.getConstExp())); // TODO:visit所有Exp型节点都要返回ArrayList<IrInstruction>
+            s.setArraySize(constDef.getConstExp().getResult());
+            s.setType(1);
+        }
+        if (bType.equals(TokenType.tokenType.INTTK)) s.setBtype(0);
+        else s.setBtype(1);
+        s.setConst(true);
+        IrAlloca irAlloca = new IrAlloca(); //先分配内存，将内存分配指令填到list中，并将这个内存分配指令作为该符号的IrValue
+        irAlloca.setRegisterName("%" + nowFunction.getNowRank());
+        instructions.add(irAlloca);
+        s.setIrValue(irAlloca); //TODO：内存分配指令的相关内容实现
+        instructions.addAll(visitConstInitValInFunction(constDef.getConstInitVal())); // 分析右边部分，将产生的代码放到list中
+        //TODO:结果所在的寄存器号应该存储在最后一条指令的操作数中,需要通过分析列表中左后一个IrInstruction来得到
+        IrStore irStore = new IrStore();
+        instructions.add(irStore); // TODO: IrStore相关内容实现（注意数组型）
+        //错误处理
+        if(isDuplicateSymbol(s.getSymbolName())) {
+            int errorLine = constDef.getIdent().getLine();
+            errorDealer.errorB(errorLine);
+        } else {
+            // 配置完成并实现错误处理后，在最后把symbol加到表中
+            addSymbol(s);
+        }
+        return instructions;
     }
 
     //这里的分析先将等号右边作为一个整体传入Value，然后value保存在左边符号的符号表内，之后再对右边进行分析
@@ -212,11 +288,10 @@ public class Visitor {
         if (constInitVal.getConstExp() != null) { //只有1个exp
             visitConstExp(constInitVal.getConstExp());
             VarValue value = new VarValue();
-            value.setConstInitVal(constInitVal);
             value.setItem(constInitVal.getConstExp().getResult());
+            return value;
         } else if (!constInitVal.getConstExpArrayList().isEmpty()) { // 多个Exp
             ArrayValue value = new ArrayValue();
-            value.setConstInitVal(constInitVal);
             for (ConstExp c: constInitVal.getConstExpArrayList()) {
                 visitConstExp(c);
                 value.addItem(c.getResult());
@@ -224,13 +299,16 @@ public class Visitor {
             return value;
         } else { //String型
             ArrayValue value = new ArrayValue();
-            value.setConstInitVal(constInitVal);
             String s = constInitVal.getStringConst().getString();
             for (java.lang.Character c: s.toCharArray()) {
                 value.addItem(c);
             }
             return value;
         }
+    }
+
+    private ArrayList<IrInstruction> visitConstInitValInFunction(ConstInitVal constInitVal) {
+        //TODO: 如果是函数，我们可能需要更多东西，ArrayList<Instruction>型可能不够
         return null;
     }
 
@@ -243,12 +321,21 @@ public class Visitor {
         return res;
     }
 
+    public ArrayList<IrInstruction> visitVarDecl(ValDecl valDecl, IrFunction nowFunction) {
+        ArrayList<IrInstruction> res = new ArrayList<>();
+        if (valDecl == null) return null;
+        for (ValDef v : valDecl.getVarDefList()) {
+            res.addAll(visitVarDef(v, valDecl.getbType(), nowFunction));
+        }
+        return res;
+    }
+
     private IrGlobalVariable visitVarDef(ValDef valDef, TokenType.tokenType bType) {
         if (valDef == null) return null;
         // 配置symbol
         Symbol s = new Symbol(nowTableId, valDef.getIdent().getString());
         if(valDef.getConstExp() == null) s.setType(0);
-        else {//TODO: 如果是数组，那么中括号里边的信息也应该传入符号表中，这里还没实现
+        else { //将中括号中的信息进行分析并传入符号表
             visitConstExp(valDef.getConstExp());
             s.setArraySize(valDef.getConstExp().getResult());
             s.setType(1);
@@ -295,7 +382,42 @@ public class Visitor {
             irGlobalVariable.setConstant(null);
         }
         irGlobalVariable.setArraySize(s.getArraySize());
+        irGlobalVariable.setRegisterName("@" + s.getSymbolName());
+        s.setIrValue(irGlobalVariable); // 配置完成后将irGlobalVariable加到symbol中
         return irGlobalVariable;
+    }
+
+    private ArrayList<IrInstruction> visitVarDef(ValDef valDef, TokenType.tokenType bType, IrFunction nowFunction) {
+        ArrayList<IrInstruction> instructions = new ArrayList<>();
+        if (valDef == null) return null;
+        // 配置symbol
+        Symbol s = new Symbol(nowTableId, valDef.getIdent().getString());
+        if(valDef.getConstExp() == null) s.setType(0);
+        else {
+            instructions.addAll(visitConstExp(valDef.getConstExp())); // TODO:visit所有Exp型节点都要返回ArrayList<IrInstruction>
+            s.setArraySize(valDef.getConstExp().getResult());
+            s.setType(1);
+        }
+        if (bType.equals(TokenType.tokenType.INTTK)) s.setBtype(0);
+        else s.setBtype(1);
+        s.setConst(true);
+        IrAlloca irAlloca = new IrAlloca(); //先分配内存，将内存分配指令填到list中，并将这个内存分配指令作为该符号的IrValue
+        irAlloca.setRegisterName("%" + nowFunction.getNowRank());
+        instructions.add(irAlloca);
+        s.setIrValue(irAlloca); //TODO：内存分配指令的相关内容实现
+        instructions.addAll(visitInitValInFunction(valDef.getInitVal())); // 分析右边部分，将产生的代码放到list中
+        //TODO:结果所在的寄存器号应该存储在最后一条指令的操作数中,需要通过分析列表中左后一个IrInstruction来得到
+        IrStore irStore = new IrStore();
+        instructions.add(irStore); // TODO: IrStore相关内容实现（注意数组型）
+        //错误处理
+        if(isDuplicateSymbol(s.getSymbolName())) {
+            int errorLine = valDef.getIdent().getLine();
+            errorDealer.errorB(errorLine);
+        } else {
+            // 配置完成并实现错误处理后，在最后把symbol加到表中
+            addSymbol(s);
+        }
+        return instructions;
     }
 
     //与constInitVal逻辑一致
@@ -304,11 +426,9 @@ public class Visitor {
         if (initVal.getExp() != null) { // 只有一个Exp
             visitExp(initVal.getExp());
             VarValue value = new VarValue();
-            value.setInitVal(initVal);
             value.setItem(initVal.getExp().getAddExp().getResult());
         } else if (!initVal.getExpArrayList().isEmpty()) { // 多个Exp
             ArrayValue value = new ArrayValue();
-            value.setInitVal(initVal);
             for (Exp e: initVal.getExpArrayList()) {
                 visitExp(e);
                 value.addItem(e.getAddExp().getResult());
@@ -316,13 +436,17 @@ public class Visitor {
             return value;
         } else { //String型
             ArrayValue value = new ArrayValue();
-            value.setInitVal(initVal);
             String s = initVal.getStringConst().getString();
             for (java.lang.Character c: s.toCharArray()) {
                 value.addItem(c);
             }
             return value;
         }
+        return null;
+    }
+
+    private ArrayList<IrInstruction> visitInitValInFunction(InitVal initVal) {
+        //TODO: 如果是函数，我们可能需要更多东西，ArrayList<Instruction>型可能不够
         return null;
     }
 
@@ -345,6 +469,7 @@ public class Visitor {
         // 注意函数的block与普通block的不同，函数的block需要在上一层建立，因为需要将参数进行存储，普通block在visitBlock函数中建立即可
         newSymbolTable(); // 进入新符号表的同时配置IrFunction
         function.setName("@" + s.getSymbolName());
+        function.setRegisterName("@" + s.getSymbolName());
         IrFunctionTy type = new IrFunctionTy();
         if(s.getBtype() == 0) {
             type.setFuncType(new IrIntegerTy());
@@ -361,11 +486,15 @@ public class Visitor {
         // 从v中取出关于参数的描述，给每个参数分配临时寄存器之后加到irFunction中
         ArrayList<IrArgument> temp = ((FuncValue) v).getArguments();
         for(int i = 0; i < temp.size(); i++) {
-            temp.get(i).setRank(function.getNowRank());
+            IrArgument a = temp.get(i);
+            a.setRank(function.getNowRank());
+            a.setRegisterName("@" + a.getRank());
         }
         function.setArguments(temp);
         // 分析后边的block，需要将函数是否为void类型传入函数以供后续判断
         function.setIrBlock(visitFuncBlock(funcDef.getBlock(), bType));
+        function.setRegisterName("-1");
+        s.setIrValue(function);
         // 最后再返回上一级symbolTable（即将nowTableId改成fatherTableId）
         returnFatherTable();
         return function;
@@ -431,6 +560,7 @@ public class Visitor {
         }
         argument.setArgumentType(type);
         argument.setName(s.getSymbolName());
+        s.setIrValue(argument); //配置完成后将argument加到symbol中
         return argument;
     }
 

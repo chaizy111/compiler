@@ -29,6 +29,10 @@ public class IrArgument extends IrValue implements IrNode {
         this.name = name;
     }
 
+    public int getRank() {
+        return rank;
+    }
+
     @Override
     public ArrayList<String> output() {
         ArrayList<String> res = new ArrayList<>();

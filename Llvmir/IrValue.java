@@ -10,6 +10,15 @@ public class IrValue { // TODO: IrValue,IrUse,IrUser是与代码优化相关的�
 //    private String name;
 //    private LinkedList<IrUse> useList;
 //    private LinkedList<IrUser> userList;
+    private String registerName;
+
+    public void setRegisterName(String registerName) {
+        this.registerName = registerName;
+    }
+
+    public String getRegisterName() {
+        return registerName;
+    }
 
     //protected:
     //    TypePtr _type;
