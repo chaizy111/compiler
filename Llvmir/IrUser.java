@@ -1,4 +1,9 @@
 package Llvmir;
 
-public class IrUser {
+import java.util.LinkedList;
+
+public class IrUser extends IrValue{
+    private LinkedList<IrValue> operands;
+
+
 }

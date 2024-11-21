@@ -5,15 +5,31 @@ import Llvmir.Type.IrType;
 import java.util.ArrayList;
 import java.util.LinkedList;
 
-public class IrValue { // TODO: IrValue,IrUse,IrUser是与代码优化相关的，代码生成是可以先不做
-//    private IrType type;
-//    private String name;
+public class IrValue {
+    private IrType type;
+    private String name;
 //    private LinkedList<IrUse> useList;
 //    private LinkedList<IrUser> userList;
     private String registerName;
 
     public void setRegisterName(String registerName) {
         this.registerName = registerName;
+    }
+
+    public void setType(IrType type) {
+        this.type = type;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public IrType getType() {
+        return type;
+    }
+
+    public String getName() {
+        return name;
     }
 
     public String getRegisterName() {

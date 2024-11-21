@@ -558,7 +558,7 @@ public class Visitor {
         } else {
             type.setType(new IrCharTy());
         }
-        argument.setArgumentType(type);
+        argument.setType(type);
         argument.setName(s.getSymbolName());
         s.setIrValue(argument); //配置完成后将argument加到symbol中
         return argument;
