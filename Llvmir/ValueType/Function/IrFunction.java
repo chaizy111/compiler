@@ -7,16 +7,18 @@ import Llvmir.Type.IrType;
 import Llvmir.ValueType.IrBasicBlock;
 
 import java.util.ArrayList;
+import java.util.LinkedList;
 
 public class IrFunction extends IrValue implements IrNode {
     private IrFunctionTy type;
-    private ArrayList<IrArgument> arguments;
+    private LinkedList<IrArgument> arguments;
     private IrBasicBlock irBlock;
     private CntUtils cntUtils;
 
     public IrFunction() {
+        super();
         type = null;
-        arguments = new ArrayList<>();
+        arguments = new LinkedList<>();
         irBlock = null;
         cntUtils = new CntUtils();
     }
@@ -25,7 +27,7 @@ public class IrFunction extends IrValue implements IrNode {
         this.type = type;
     }
 
-    public void setArguments(ArrayList<IrArgument> arguments) {
+    public void setArguments(LinkedList<IrArgument> arguments) {
         this.arguments = arguments;
     }
 

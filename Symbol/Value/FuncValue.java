@@ -3,16 +3,17 @@ package Symbol.Value;
 import Llvmir.ValueType.Function.IrArgument;
 
 import java.util.ArrayList;
+import java.util.LinkedList;
 
 public class FuncValue extends Value {
-    int paraTableId;
-    int paraNum;
-    ArrayList<IrArgument> arguments;
+    private int paraTableId;
+    private int paraNum;
+    private LinkedList<IrArgument> arguments;
 
     public FuncValue(int paraTableId, int paraNum) {
         this.paraTableId = paraTableId;
         this.paraNum = paraNum;
-        this.arguments = new ArrayList<>();
+        this.arguments = new LinkedList<>();
     }
 
     public int getParaTableId() {
@@ -31,7 +32,7 @@ public class FuncValue extends Value {
         arguments.add(argument);
     }
 
-    public ArrayList<IrArgument> getArguments() {
+    public LinkedList<IrArgument> getArguments() {
         return arguments;
     }
 }

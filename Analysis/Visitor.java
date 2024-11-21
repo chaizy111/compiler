@@ -31,6 +31,7 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.LinkedList;
 
 public class Visitor {
     private FileWriter outputfile;
@@ -40,6 +41,7 @@ public class Visitor {
     private int nowTableId;
     private int maxTableId;
     private IrModule irModule;
+    private IrFunction nowIrFunction;
 
     public Visitor(CompUnit compUnit, FileWriter outputfile, ErrorDealer errorDealer) {
         this.compUnit = compUnit;
@@ -49,6 +51,7 @@ public class Visitor {
         this.nowTableId = 0;
         this.maxTableId = 0;
         this.irModule = new IrModule();
+        this.nowIrFunction = null;
     }
 
     //TODO：在各个visit中完善ir各个部分的构建，最后统一输出。visit需要返回分析得到的ir成分，最后统一输出（中间代码生成的主要逻辑）
@@ -96,6 +99,18 @@ public class Visitor {
         return null;
     }
 
+    public Symbol getSymbolByRegister(String reName) {
+        int index = nowTableId;
+        while (index != 0) {
+            SymbolTable s = symbolTables.get(index);
+            for (Symbol sym : s.getDirectory().values()) {
+                if (sym.getIrValue().getRegisterName().equals(reName)) return sym;
+            }
+            index = s.getFatherId();
+        }
+        return null;
+    }
+
     private boolean isDuplicateSymbol(String symbolName) {
         int index = nowTableId;
         SymbolTable s = symbolTables.get(index);
@@ -129,20 +144,6 @@ public class Visitor {
         return false;
     }
 
-    public String getRegisterByName(String symbolName) { //通过符号名向上找到其存储的寄存器名，生成中间代码时用
-        int index = nowTableId;
-        while (index != 0) { // 一直往上找直到0号符号表
-            SymbolTable s = symbolTables.get(index);
-            for (String string : s.getDirectory().keySet()) {
-                if (string.equals(symbolName)) {
-                    return s.getDirectory().get(symbolName).getIrValue().getRegisterName();
-                }
-            }
-            index = s.getFatherId();
-        }
-        return null;
-    }
-
     private void visitCompUnit(CompUnit compUnit) {
         if (compUnit == null) return;
         for (Decl d : compUnit.getDeclArrayList()) {
@@ -166,13 +167,13 @@ public class Visitor {
         }
     }
 
-    private ArrayList<IrInstruction> visitDecl(Decl decl, IrFunction nowFunction) {
+    private ArrayList<IrInstruction> visitDeclInFunc(Decl decl) {
         //一个新的visitDecl，区别与原来的，用于局部声明语句的分析
         if (decl == null) return null;
         if (decl instanceof ConstDecl) {
-            return visitConstDecl((ConstDecl) decl, nowFunction);
+            return visitConstDeclInFunc((ConstDecl) decl);
         } else if (decl instanceof ValDecl) {
-            return visitVarDecl((ValDecl) decl, nowFunction);
+            return visitVarDeclInFunc((ValDecl) decl);
         } else {
             return null;
         }
@@ -187,11 +188,11 @@ public class Visitor {
         return res;
     }
 
-    private ArrayList<IrInstruction> visitConstDecl(ConstDecl constDecl, IrFunction nowFunction) {
+    private ArrayList<IrInstruction> visitConstDeclInFunc(ConstDecl constDecl) {
         ArrayList<IrInstruction> res = new ArrayList<>();
         if (constDecl == null) return null;
         for (ConstDef c : constDecl.getConstDefList()) {
-            res.addAll(visitConstDef(c, constDecl.getbType(), nowFunction));
+            res.addAll(visitConstDefInFunc(c, constDecl.getbType()));
         }
         return res;
     }
@@ -221,17 +222,16 @@ public class Visitor {
         }
         //配置IrGlobalVariable
         IrGlobalVariable irGlobalVariable = new IrGlobalVariable("@" + s.getSymbolName());
-        irGlobalVariable.setIsArray(s.getType() == 1);
         IrType t;
         if (s.getBtype() == 0) {
             t = new IrIntegerTy();
         } else {
             t = new IrCharTy();
         }
-        irGlobalVariable.setType(t);
         if (s.getArraySize() == 0) { // 非数组型
             IrConstant constant = new IrConstantVal(((VarValue) s.getValue()).getItem());
             irGlobalVariable.setConstant(constant);
+            irGlobalVariable.setType(t);
         } else { //数组型
             ArrayList<Integer> temp = ((ArrayValue) s.getValue()).getArray(s.getArraySize());
             ArrayList<IrConstantVal> arrays = new ArrayList<>();
@@ -242,33 +242,53 @@ public class Visitor {
             IrConstant constant = new IrConstantArray(arrays);
             constant.setType(t);
             irGlobalVariable.setConstant(constant);
+            IrArrayTy nt = new IrArrayTy();
+            nt.setArrayType(t);
+            nt.setArraySize(s.getArraySize());
+            irGlobalVariable.setType(nt);
         }
-        irGlobalVariable.setArraySize(s.getArraySize());
         irGlobalVariable.setRegisterName("@" + s.getSymbolName());
         s.setIrValue(irGlobalVariable); //配置完成irGlobalVariable后将其加到符号的属性中
         return irGlobalVariable;
     }
 
-    private ArrayList<IrInstruction> visitConstDef(ConstDef constDef, TokenType.tokenType bType, IrFunction nowFunction) {
+    private ArrayList<IrInstruction> visitConstDefInFunc(ConstDef constDef, TokenType.tokenType bType) {
         ArrayList<IrInstruction> instructions = new ArrayList<>();
         if (constDef == null) return null;
         // 配置symbol
         Symbol s = new Symbol(nowTableId, constDef.getIdent().getString());
         if(constDef.getConstExp() == null) s.setType(0);
         else {
-            instructions.addAll(visitConstExp(constDef.getConstExp())); // TODO:visit所有Exp型节点都要返回ArrayList<IrInstruction>
+            instructions.addAll(visitConstExp(constDef.getConstExp()).getTempInstructions());
             s.setArraySize(constDef.getConstExp().getResult());
             s.setType(1);
         }
         if (bType.equals(TokenType.tokenType.INTTK)) s.setBtype(0);
         else s.setBtype(1);
         s.setConst(true);
-        IrAlloca irAlloca = new IrAlloca(); //先分配内存，将内存分配指令填到list中，并将这个内存分配指令作为该符号的IrValue
-        irAlloca.setRegisterName("%" + nowFunction.getNowRank());
+
+        IrType t; // 判断该符号的种类
+        if (s.getBtype() == 0) {
+            t = new IrIntegerTy();
+        } else {
+            t = new IrCharTy();
+        }
+        IrArrayTy nt = new IrArrayTy();
+        if (s.getArraySize() != 0) {
+            nt.setArrayType(t);
+            nt.setArraySize(s.getArraySize());
+            t = nt;
+        }
+
+        IrAlloca irAlloca = new IrAlloca(); //先分配内存，将内存分配指令alloca填到list中，并将这个内存分配指令作为该符号的IrValue
+        irAlloca.setType(t);
+        irAlloca.setType(nt);
+        irAlloca.setRegisterName("%" + nowIrFunction.getNowRank());
         instructions.add(irAlloca);
-        s.setIrValue(irAlloca); //TODO：内存分配指令的相关内容实现
-        instructions.addAll(visitConstInitValInFunction(constDef.getConstInitVal())); // 分析右边部分，将产生的代码放到list中
-        //TODO:结果所在的寄存器号应该存储在最后一条指令的操作数中,需要通过分析列表中左后一个IrInstruction来得到
+        s.setIrValue(irAlloca);
+
+        IrValue v = visitConstInitValInFunction(constDef.getConstInitVal());
+        instructions.addAll(v.getTempInstructions()); // 分析右边部分，将产生的代码放到list中
         IrStore irStore = new IrStore();
         instructions.add(irStore); // TODO: IrStore相关内容实现（注意数组型）
         //错误处理
@@ -307,9 +327,28 @@ public class Visitor {
         }
     }
 
-    private ArrayList<IrInstruction> visitConstInitValInFunction(ConstInitVal constInitVal) {
-        //TODO: 如果是函数，我们可能需要更多东西，ArrayList<Instruction>型可能不够
-        return null;
+    private IrValue visitConstInitValInFunction(ConstInitVal constInitVal) {
+        //一个Exp用irConstantVal，多个或String型irConstantVal
+        if (constInitVal.getConstExp() != null) { //只有1个exp
+            return visitConstExp(constInitVal.getConstExp());
+        } else if (!constInitVal.getConstExpArrayList().isEmpty()) { // 多个Exp
+            IrValue res = new IrValue();
+            for (ConstExp c: constInitVal.getConstExpArrayList()) {
+                IrValue t = visitConstExp(c);
+                res.addAllTempInstruction(t.getTempInstructions());
+                res.addTempValue(t);
+            }
+            return res;
+        } else { //String型
+            ArrayList<IrConstantVal> list = new ArrayList<>();
+            String s = constInitVal.getStringConst().getString();
+            for (java.lang.Character c: s.toCharArray()) {
+                list.add(new IrConstantVal(c));
+            }
+            IrConstantArray res = new IrConstantArray(list);
+            res.setType(new IrCharTy());
+            return res;
+        }
     }
 
     private ArrayList<IrGlobalVariable> visitVarDecl(ValDecl valDecl) {
@@ -321,11 +360,11 @@ public class Visitor {
         return res;
     }
 
-    public ArrayList<IrInstruction> visitVarDecl(ValDecl valDecl, IrFunction nowFunction) {
+    public ArrayList<IrInstruction> visitVarDeclInFunc(ValDecl valDecl) {
         ArrayList<IrInstruction> res = new ArrayList<>();
         if (valDecl == null) return null;
         for (ValDef v : valDecl.getVarDefList()) {
-            res.addAll(visitVarDef(v, valDecl.getbType(), nowFunction));
+            res.addAll(visitVarDefInFunc(v, valDecl.getbType()));
         }
         return res;
     }
@@ -355,7 +394,6 @@ public class Visitor {
         }
         //配置IrGlobalVariable
         IrGlobalVariable irGlobalVariable = new IrGlobalVariable("@" + s.getSymbolName());
-        irGlobalVariable.setIsArray(s.getType() == 1);
         IrType t;
         if (s.getBtype() == 0) {
             t = new IrIntegerTy();
@@ -377,36 +415,56 @@ public class Visitor {
                 IrConstant constant = new IrConstantArray(arrays);
                 constant.setType(t);
                 irGlobalVariable.setConstant(constant);
+                IrArrayTy nt = new IrArrayTy();
+                nt.setArrayType(t);
+                nt.setArraySize(s.getArraySize());
+                irGlobalVariable.setType(nt);
             }
         } else {
             irGlobalVariable.setConstant(null);
         }
-        irGlobalVariable.setArraySize(s.getArraySize());
         irGlobalVariable.setRegisterName("@" + s.getSymbolName());
         s.setIrValue(irGlobalVariable); // 配置完成后将irGlobalVariable加到symbol中
         return irGlobalVariable;
     }
 
-    private ArrayList<IrInstruction> visitVarDef(ValDef valDef, TokenType.tokenType bType, IrFunction nowFunction) {
+    private ArrayList<IrInstruction> visitVarDefInFunc(ValDef valDef, TokenType.tokenType bType) {
         ArrayList<IrInstruction> instructions = new ArrayList<>();
         if (valDef == null) return null;
         // 配置symbol
         Symbol s = new Symbol(nowTableId, valDef.getIdent().getString());
         if(valDef.getConstExp() == null) s.setType(0);
         else {
-            instructions.addAll(visitConstExp(valDef.getConstExp())); // TODO:visit所有Exp型节点都要返回ArrayList<IrInstruction>
+            instructions.addAll(visitConstExp(valDef.getConstExp()).getTempInstructions());
             s.setArraySize(valDef.getConstExp().getResult());
             s.setType(1);
         }
         if (bType.equals(TokenType.tokenType.INTTK)) s.setBtype(0);
         else s.setBtype(1);
         s.setConst(true);
-        IrAlloca irAlloca = new IrAlloca(); //先分配内存，将内存分配指令填到list中，并将这个内存分配指令作为该符号的IrValue
-        irAlloca.setRegisterName("%" + nowFunction.getNowRank());
+
+        IrType t; // 判断该符号的种类
+        if (s.getBtype() == 0) {
+            t = new IrIntegerTy();
+        } else {
+            t = new IrCharTy();
+        }
+        IrArrayTy nt = new IrArrayTy();
+        if (s.getArraySize() != 0) {
+            nt.setArrayType(t);
+            nt.setArraySize(s.getArraySize());
+            t = nt;
+        }
+
+        IrAlloca irAlloca = new IrAlloca(); //先分配内存，将内存分配指令alloca填到list中，并将这个内存分配指令作为该符号的IrValue
+        irAlloca.setType(t);
+        irAlloca.setType(nt);
+        irAlloca.setRegisterName("%" + nowIrFunction.getNowRank());
         instructions.add(irAlloca);
-        s.setIrValue(irAlloca); //TODO：内存分配指令的相关内容实现
-        instructions.addAll(visitInitValInFunction(valDef.getInitVal())); // 分析右边部分，将产生的代码放到list中
-        //TODO:结果所在的寄存器号应该存储在最后一条指令的操作数中,需要通过分析列表中左后一个IrInstruction来得到
+        s.setIrValue(irAlloca);
+
+        IrValue v = visitInitValInFunction(valDef.getInitVal());
+        instructions.addAll(v.getTempInstructions()); // 分析右边部分，将产生的代码放到list中
         IrStore irStore = new IrStore();
         instructions.add(irStore); // TODO: IrStore相关内容实现（注意数组型）
         //错误处理
@@ -445,13 +503,33 @@ public class Visitor {
         return null;
     }
 
-    private ArrayList<IrInstruction> visitInitValInFunction(InitVal initVal) {
-        //TODO: 如果是函数，我们可能需要更多东西，ArrayList<Instruction>型可能不够
-        return null;
+    private IrValue visitInitValInFunction(InitVal initVal) {
+        //一个Exp用irConstantVal，多个或String型irConstantVal
+        if (initVal.getExp() != null) { //只有1个exp
+            return visitExp(initVal.getExp());
+        } else if (!initVal.getExpArrayList().isEmpty()) { // 多个Exp
+            IrValue res = new IrValue();
+            for (Exp e: initVal.getExpArrayList()) {
+                IrValue t = visitExp(e);
+                res.addAllTempInstruction(t.getTempInstructions());
+                res.addTempValue(t);
+            }
+            return res;
+        } else { //String型
+            ArrayList<IrConstantVal> list = new ArrayList<>();
+            String s = initVal.getStringConst().getString();
+            for (java.lang.Character c: s.toCharArray()) {
+                list.add(new IrConstantVal(c));
+            }
+            IrConstantArray res = new IrConstantArray(list);
+            res.setType(new IrCharTy());
+            return res;
+        }
     }
 
     private IrFunction visitFuncDef(FuncDef funcDef) {
         IrFunction function = new IrFunction();
+        nowIrFunction = function;// 将nowIrFunction属性改为新的function
         if (funcDef == null) return null;
         // 遇到funcDef，要先把函数名这个symbol放到当前的symbolTable中，
         Symbol s = new Symbol(nowTableId, funcDef.getIdent().getString());
@@ -484,7 +562,7 @@ public class Visitor {
         // 把存储参数的符号表的编号传给s
         s.setValue(v);
         // 从v中取出关于参数的描述，给每个参数分配临时寄存器之后加到irFunction中
-        ArrayList<IrArgument> temp = ((FuncValue) v).getArguments();
+        LinkedList<IrArgument> temp = ((FuncValue) v).getArguments();
         for(int i = 0; i < temp.size(); i++) {
             IrArgument a = temp.get(i);
             a.setRank(function.getNowRank());
@@ -503,6 +581,7 @@ public class Visitor {
     private IrFunction visitMainFuncDef(MainFuncDef mainFuncDef) {
         if (mainFuncDef == null) return null;
         IrFunction function = new IrFunction();
+        nowIrFunction = function;
         newSymbolTable();
         IrFunctionTy type = new IrFunctionTy();
         type.setFuncType(new IrIntegerTy());
@@ -565,14 +644,16 @@ public class Visitor {
     }
 
     // 由于处理逻辑不同，所以把不同的block分开
-    private void visitBlock(Block block, boolean isInForBlock, int funcType) {
+    private IrBasicBlock visitBlock(Block block, boolean isInForBlock, int funcType) {
         // 多种情况，循环块与非循环块，是否为void函数中的块
-        if (block == null) return;
+        if (block == null) return null;
+        IrBasicBlock basicBlock = new IrBasicBlock();
         newSymbolTable();
         for (BlockItem b : block.getBlockItemArrayList()) {
-            visitBlockItem(b, isInForBlock, funcType);
+            basicBlock.addAllInstruction(visitBlockItem(b, isInForBlock, funcType).getTempInstructions());
         }
         returnFatherTable();
+        return basicBlock;
     }
 
     private IrBasicBlock visitFuncBlock(Block block, int funcType) {
@@ -589,6 +670,7 @@ public class Visitor {
                         errorDealer.errorF(errorLine);
                     }
                 }
+
                 IrRet ret = new IrRet(); // 添加返回指令
                 if (funcType == 0) {
                     ret.setType(new IrIntegerTy());
@@ -600,10 +682,11 @@ public class Visitor {
                     ret.setType(new IrVoidTy());
                 }
                 basicBlock.addInstruction(ret);
+
             } else if (b instanceof Decl) {
-                visitDecl((Decl) b);
+                basicBlock.addAllInstruction(visitDeclInFunc((Decl) b));
             } else if (b instanceof Stmt) {
-                visitStmt((Stmt) b, false, funcType);
+                basicBlock.addAllInstruction(visitStmt((Stmt) b, false, funcType).getTempInstructions());
             }
         }
         // 错误处理
@@ -614,32 +697,48 @@ public class Visitor {
         return basicBlock;
     }
 
-    private void visitBlockItem(BlockItem blockItem, boolean isInForBlock, int funcType) {
-        if (blockItem == null) return;
-        if (blockItem instanceof Decl) visitDecl((Decl) blockItem);
-        else visitStmt((Stmt) blockItem, isInForBlock, funcType);
+    private IrValue visitBlockItem(BlockItem blockItem, boolean isInForBlock, int funcType) {
+        if (blockItem == null) {
+            return null;
+        }
+        if (blockItem instanceof Decl) {
+            IrValue v = new IrValue();
+            ArrayList<IrInstruction> instructions = visitDeclInFunc((Decl) blockItem);
+            v.addAllTempInstruction(instructions);
+            return v;
+        } else {
+            return visitStmt((Stmt) blockItem, isInForBlock, funcType);
+        }
     }
 
-    private void visitStmt(Stmt stmt, boolean isInForBlock, int funcType) {
-        if (stmt == null) return;
+    private IrValue visitStmt(Stmt stmt, boolean isInForBlock, int funcType) {
+        if (stmt == null) {
+            return null;
+        }
         // 由于要对for有关block进行判断，来看是否出现m错，设置了isInForBlock变量，这个变量的相关逻辑比较绕，
         // 主要就是如果是在for的stmt是block型，则在visitBlock时就将这个属性设为true，之后这个属性便会层层下传，直到for的block分析结束
         // 还要对是否是在void函数中进行判断，如果是在void函数中，那if，for，以及return语句就需要注意进行报错，所以需要传递isInVoidFunc参数
-        if (stmt instanceof IfStmt) visitIf((IfStmt) stmt, isInForBlock, funcType);
-        else if (stmt instanceof For) visitFor((For) stmt, funcType);
-        else if (stmt instanceof ReturnStmt) visitReturnStmt((ReturnStmt) stmt, funcType);
-        else if (stmt instanceof PrintfStmt) visitPrintfStmt((PrintfStmt) stmt);
-        else if (stmt instanceof LValStmt) visitLValStmt((LValStmt) stmt);
-        else if (stmt.getbOrC() != null) { // 处理break和continue
+        if (stmt instanceof IfStmt) {
+            visitIf((IfStmt) stmt, isInForBlock, funcType); //TODO：If这次作业不要求，先不管
+        } else if (stmt instanceof For) {
+            visitFor((For) stmt, funcType);//TODO：for这次作业不要求，先不管
+        } else if (stmt instanceof ReturnStmt) {
+            return visitReturnStmt((ReturnStmt) stmt, funcType);
+        } else if (stmt instanceof PrintfStmt) { //TODO：printf分割出的字符变量要放到全局，切记
+            return visitPrintfStmt((PrintfStmt) stmt);
+        } else if (stmt instanceof LValStmt) {
+            return visitLValStmt((LValStmt) stmt);
+        } else if (stmt.getbOrC() != null) { // 处理break和continue //TODO：break和continue这次作业不要求，先不管
             if (!isInForBlock) { //不是for循环中的break与continue，直接错误处理
                 int errorLine = stmt.getbOrC().getLine();
                 errorDealer.errorM(errorLine);
             }
         } else if (stmt.getB() != null) {
-            visitBlock(stmt.getB(), isInForBlock, funcType);
+            return visitBlock(stmt.getB(), isInForBlock, funcType);
         } else if (stmt.getE() != null) {
-            visitExp(stmt.getE()); //
+            return visitExp(stmt.getE());
         }
+        return null;
     }
 
     private void visitIf(IfStmt ifStmt, boolean isInForBlock, int funcType) {
@@ -658,33 +757,40 @@ public class Visitor {
         else visitStmt(f.getS(), false, funcType);
     }
 
-    private void visitReturnStmt(ReturnStmt returnStmt, int funcType) {
-        if (returnStmt == null) return;
+    private IrValue visitReturnStmt(ReturnStmt returnStmt, int funcType) {
+        if (returnStmt == null) return null;
         if (funcType == 2) { // 如果在void函数中，就报错
             if (returnStmt.getExp() != null) {
                 int errorLine = returnStmt.getLine();
                 errorDealer.errorF(errorLine);
-                return;
+                return null;
             }
         }
-        if (returnStmt.getExp() != null) visitExp(returnStmt.getExp());
+        //TODO:ret指令实现
+        if (returnStmt.getExp() != null) {
+            IrValue v = visitExp(returnStmt.getExp());
+        } else {
+
+        }
+        return null;
     }
 
-    private void visitPrintfStmt(PrintfStmt printfStmt) { // 先处理错误，再visit里边的属性
-        if (printfStmt == null) return;
+    private IrValue visitPrintfStmt(PrintfStmt printfStmt) { // 先处理错误，再visit里边的属性
+        if (printfStmt == null) return null;
         //错误处理
         if (printfStmt.getFCharacterNumInString() != printfStmt.getExpArrayList().size()) {
             int errorLine = printfStmt.getLine();
             errorDealer.errorL(errorLine);
         }
+        //TODO: printf相关实现
         for (Exp e : printfStmt.getExpArrayList()) {
             visitExp(e);
         }
+        return null;
     }
 
-    //TODO：从这个方法往后，所有visit方法的实现与使用都需要再三考虑，该不该返回值，返回什么样的值，都是要讨论的问题
-    private void visitLValStmt(LValStmt lValStmt) {
-        if (lValStmt == null) return;
+    private IrValue visitLValStmt(LValStmt lValStmt) {
+        if (lValStmt == null) return null;
         //先错误处理
         Token t = lValStmt.getlVal().getIdent();
         if (isConstSymbol(t.getString())) {
@@ -692,8 +798,12 @@ public class Visitor {
             errorDealer.errorH(errorLine);
         }
         //再处理LVal
+        //TODO：对于assign型语句，即Lval = exp型的，先通过visitLVal获取左边的值，从返回的IrValue中取出regisiterName用于构建Instruction
+        //TODO：再通过visitExp获取右边的值，从返回的IrValue中取出regisiterName用于构建Store Instruction
+        //TODO：对于getint和getchar要实现call语句
         visitLVal(lValStmt.getlVal());
         visitExp(lValStmt.getExp());
+        return null;
     }
 
     private void visitForStmt(ForStmt forStmt) {
@@ -711,8 +821,11 @@ public class Visitor {
 
     //TODO: null:-1, int/char:0, intArray/constIntArray: 2,charArray/constCharArray:3, others: 4
     //从这往下所有visit方法大多返回一个int型的返回值，代表其分析到底是什么类型，这些返回值都只为error e的判断服务，如果想要具体的value值，需要更改实现
-    private int visitExp(Exp exp) {
-        if (exp == null) return -1;
+    //TODO:由只返回一个int的值改为返回一个IrValue，包含过程中分析得到的语句以及最后结果存储的位置，还有exp的类型（用IrType表示的）
+    private IrValue visitExp(Exp exp) {
+        if (exp == null) {
+            return null;
+        }
         return visitAddExp(exp.getAddExp());
     }
 
@@ -721,15 +834,16 @@ public class Visitor {
         visitLOrExp(cond.getlOrExp());
     }
 
-    private int visitLVal(LVal lVal) {
-        if (lVal == null) return -1;
+    private IrValue visitLVal(LVal lVal) {
+        if (lVal == null) return null;
         //先错误处理
         if (isUnDefinedSymbol(lVal.getIdent().getString())) {
             int errorLine = lVal.getIdent().getLine();
             errorDealer.errorC(errorLine);
-            return -1;
+            return null;
         }
         //再处理exp，这里使用t1与t2是看是数组还是变量，类似S[0]的情况
+        //TODO:构建IrValue并返回
         int t1 = visitExp(lVal.getExp());
         int t2 = getSymbol(lVal.getIdent().getString()).judgeKindN();
         if (t2 == 2 || t2 == 3) {
@@ -738,30 +852,38 @@ public class Visitor {
         return t2;
     }
 
-    private int visitPrimaryExp(PrimaryExp primaryExp) {
-        if (primaryExp == null) return -1;
+    private IrValue visitPrimaryExp(PrimaryExp primaryExp) { //TODO：构建IrValue并返回
+        if (primaryExp == null) return null;
         if (primaryExp.getExp() != null) return visitExp(primaryExp.getExp());
         else if (primaryExp.getlVal() != null) return visitLVal(primaryExp.getlVal());
         else if (primaryExp.getNumber() != null) return visitNumber(primaryExp.getNumber());
         else if (primaryExp.getCharacter() != null) return visitCharacter(primaryExp.getCharacter());
-        return -1;
+        return null;
     }
 
-    private int visitNumber(Number number) {
+    private IrValue visitNumber(Number number) { //TODO：构建IrValue并返回
         return 0;
     }
 
-    private int visitCharacter(Character character) {
+    private IrValue visitCharacter(Character character) { //TODO：构建IrValue并返回
         return 0;
     }
 
-    private int visitUnaryExp(UnaryExp unaryExp) {
-        if (unaryExp == null) return -1;
-        if (unaryExp.getPrimaryExp() != null) return visitPrimaryExp(unaryExp.getPrimaryExp());
-        else if (unaryExp.getUnaryExp() != null) {
-            visitUnaryOp(unaryExp.getUnaryOp());
+    private IrValue visitUnaryExp(UnaryExp unaryExp) {
+        if (unaryExp == null) {
+            return null;
+        }
+        if (unaryExp.getPrimaryExp() != null) {
+            return visitPrimaryExp(unaryExp.getPrimaryExp());
+        } else if (unaryExp.getUnaryExp() != null) {
+            // TODO: 分析unaryOp的种类来决定下一步的操作，如果是+或者!则不生成语句，如果是-生成一个与0相减的语句
+            int judge = visitUnaryOp(unaryExp.getUnaryOp());
+            if (judge == 1) {
+
+            }
             return visitUnaryExp(unaryExp.getUnaryExp());
         } else if (unaryExp.getIdent() != null) {
+            //TODO：这个部分生成函数调用相关语句,构架一个IrValue并返回
             Token t = unaryExp.getIdent();
             // 先处理错误c
             if (isUnDefinedSymbol(t.getString())) {
@@ -776,11 +898,11 @@ public class Visitor {
                         int errorLine = t.getLine();
                         errorDealer.errorD(errorLine);
                     } else {//再处理错误e，依次与定义比较每一个参数的类型
-                        ArrayList<Integer> paraList = visitFuncRParams(unaryExp.getFuncRParams());
+                        ArrayList<IrValue> paraList = visitFuncRParams(unaryExp.getFuncRParams());
                         SymbolTable symbolTable = symbolTables.get(sValue.getParaTableId());
                         int i = 0;
                         for (Symbol ss:symbolTable.getDirectory().values()) {
-                            if (ss.judgeKindN() != paraList.get(i)) {
+                            if (ss.judgeKindN() != paraList.get(i).judgeKindN()) {
                                 int errorLine = t.getLine();
                                 errorDealer.errorE(errorLine);
                                 break;
@@ -796,46 +918,63 @@ public class Visitor {
         return -1;
     }
 
-    //TODO： 在我目前的实现中，这个函数没有什么作用，不过后续应该需要补全
-    private void visitUnaryOp(UnaryOp unaryOp) {
-
+    private int visitUnaryOp(UnaryOp unaryOp) {
+        if (unaryOp.getToken().getString().equals("-")) {
+            return 1;
+        } else {
+            return 0;
+        }
     }
 
-    private ArrayList<Integer> visitFuncRParams(FuncRParams funcRParams) {
+    private ArrayList<IrValue> visitFuncRParams(FuncRParams funcRParams) {
         if (funcRParams == null) return null;
-        ArrayList<Integer> l = new ArrayList<>();
+        ArrayList<IrValue> l = new ArrayList<>();
         for (Exp e: funcRParams.getExpArrayList()) {
             l.add(visitExp(e));
         }
         return l;
     }
 
-    //TODO： mulExp中存的symbol并没有遍历，如果返回value，一定要重构分析方法
-    private int visitMulExp(MulExp mulExp) {
-        if (mulExp == null) return -1;
-        int t = -2;
+    private IrValue visitMulExp(MulExp mulExp) {
+        IrValue res = new IrValue();
+        if (mulExp == null) return null;
+        int flag = -1;
+        IrValue t1, t2;
         for (UnaryExp u : mulExp.getUnaryExpArrayList()) {
-            if(t == -2) { // 返回第一个unaryExp的类型即可
-                t = visitUnaryExp(u);
+            if(flag == -1) { // 返回第一个unaryExp的类型即可
+                t1 = visitUnaryExp(u);
+                res.addAllTempInstruction(t1.getTempInstructions());
+                flag = 1;
             } else { //其他的也需要分析，可能会有错误出现
-                visitUnaryExp(u);
+                t2 = visitUnaryExp(u);
+                res.addAllTempInstruction(t2.getTempInstructions());
+                // TODO：后边的要获取t1 t2寄存器号，根据对应符号实现mul、div、 mod语句的生成并添加到res的tempInstructions中
+
+                t1 = t2;
             }
         }
-        return t;
+        return res;
     }
 
-    //TODO： addExp中存的symbol并没有遍历，如果返回value，一定要重构分析方法
-    private int visitAddExp(AddExp addExp) {
-        if (addExp == null) return -1;
-        int t = -2;
+    private IrValue visitAddExp(AddExp addExp) {
+        IrValue res = new IrValue();
+        if (addExp == null) return null;
+        int flag = -1;
+        IrValue t1, t2;
         for (MulExp m : addExp.getMulExpArrayList()) {
-            if(t == -2) { // 返回第一个MulExp的类型即可
-                t = visitMulExp(m);
+            if(flag == -1) { // 返回第一个MulExp的类型即可
+                t1 = visitMulExp(m);
+                res.addAllTempInstruction(t1.getTempInstructions());
+                flag = 1;
             } else {//其他的也需要分析，可能会有错误出现
-                visitMulExp(m);
+                t2 = visitMulExp(m);
+                res.addAllTempInstruction(t2.getTempInstructions());
+                // TODO：后边的要获取t1 t2寄存器根据符号实现add sub语句的生成并添加到res的tempInstructions中
+
+                t1 = t2;
             }
         }
-        return t;
+        return res;
     }
 
     //TODO： relExp中存的symbol并没有遍历，如果返回value，一定要重构分析方法
@@ -866,9 +1005,8 @@ public class Visitor {
         }
     }
 
-    //TODO： constExp是否要返回value以及要怎样返回需要考虑
-    private void visitConstExp(ConstExp constExp) {
-        visitAddExp(constExp.getAddExp());
+    private IrValue visitConstExp(ConstExp constExp) {
+        return visitAddExp(constExp.getAddExp());
     }
 
     public void printSymbolTables() throws IOException {

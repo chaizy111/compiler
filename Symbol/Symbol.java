@@ -102,6 +102,6 @@ public class Symbol {
         else if (!isConst && (type == 2) && (btype == 2)) return 4;
         else if (!isConst && (type == 2) && (btype == 1)) return 0;
         else if (!isConst && (type == 2) && (btype == 0)) return 0;
-        else return -1;
+        else return 0;
     }
 }

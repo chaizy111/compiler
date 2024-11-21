@@ -10,6 +10,7 @@ public class IrArgument extends IrValue implements IrNode {
     private int rank;
 
     public IrArgument() {
+        super();
         rank = -1;
     }
 

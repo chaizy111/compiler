@@ -13,6 +13,10 @@ public class IrFunctionTy extends IrType {
         this.funcType = funcType;
     }
 
+    public IrType getFuncType() {
+        return funcType;
+    }
+
     @Override
     public ArrayList<String> output() {
         return funcType.output();

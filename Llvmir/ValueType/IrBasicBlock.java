@@ -10,11 +10,16 @@ public class IrBasicBlock extends IrValue implements IrNode {
     private ArrayList<IrInstruction> instructions;
 
     public IrBasicBlock() {
+        super();
         instructions = new ArrayList<>();
     }
 
     public void addInstruction(IrInstruction instruction) {
         instructions.add(instruction);
+    }
+
+    public void addAllInstruction(ArrayList<IrInstruction> instructions) {
+        this.instructions.addAll(instructions);
     }
 
     @Override

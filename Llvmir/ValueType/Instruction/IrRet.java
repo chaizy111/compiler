@@ -6,16 +6,11 @@ import Llvmir.Type.IrVoidTy;
 import java.util.ArrayList;
 
 public class IrRet extends IrInstruction{
-    private IrType type;
     private int result;
 
     public IrRet() {
-        type = null;
+        super();
         result = -1;
-    }
-
-    public void setType(IrType type) {
-        this.type = type;
     }
 
     public void setResult(int result) {
@@ -26,10 +21,10 @@ public class IrRet extends IrInstruction{
     public ArrayList<String> output() {
         ArrayList<String> res = new ArrayList<>();
         String s = "ret ";
-        if(type instanceof IrVoidTy) {
-            s = s + type.output().get(0) + "\n";
+        if(this.getType() instanceof IrVoidTy) {
+            s = s + this.getType().output().get(0) + "\n";
         } else {
-            s = s + type.output().get(0) + " " + result + "\n";
+            s = s + this.getType().output().get(0) + " " + result + "\n";
         }
         res.add(s);
         return res;
