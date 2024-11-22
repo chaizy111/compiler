@@ -1,12 +1,16 @@
 package Llvmir.Type;
 
+import Llvmir.IrValue;
+
 import java.util.ArrayList;
 
 public class IrFunctionTy extends IrType {
     private IrType funcType;
+    private ArrayList<IrValue> params;
 
     public IrFunctionTy() {
         funcType = null;
+        params = new ArrayList<>();
     }
 
     public void setFuncType(IrType funcType) {
@@ -15,6 +19,10 @@ public class IrFunctionTy extends IrType {
 
     public IrType getFuncType() {
         return funcType;
+    }
+
+    public void setParams(ArrayList<IrValue> params) {
+        this.params = params;
     }
 
     @Override

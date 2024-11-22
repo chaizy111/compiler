@@ -9,6 +9,10 @@ public class IrConstantArray extends IrConstant{
         constantVals = arrays;
     }
 
+    public ArrayList<IrConstantVal> getConstantVals() {
+        return constantVals;
+    }
+
     @Override
     public ArrayList<String> output() {
         StringBuilder s = new StringBuilder();

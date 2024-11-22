@@ -7,6 +7,7 @@ public class IrUser extends IrValue{
 
     public IrUser() {
         super();
+        operands = new LinkedList<>();
     }
 
     public void addOprands(IrValue irValue) {
@@ -14,7 +15,11 @@ public class IrUser extends IrValue{
     }
 
     public void setOperand(IrValue value, int index) {
-        operands.set(index, value);
+        if (index >= operands.size()) {
+            operands.add(value);
+        } else {
+            operands.set(index, value);
+        }
     }
 
     /* 根据给定index找到指定操作数 */

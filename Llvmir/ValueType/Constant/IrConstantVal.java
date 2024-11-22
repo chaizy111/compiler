@@ -10,6 +10,14 @@ public class IrConstantVal extends IrConstant {
         this.val = val;
     }
 
+    public void setVal(int val) {
+        this.val = val;
+    }
+
+    public int getVal() {
+        return val;
+    }
+
     @Override
     public ArrayList<String> output() {
         ArrayList<String> res = new ArrayList<>();

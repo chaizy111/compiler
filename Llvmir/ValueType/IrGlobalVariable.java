@@ -20,6 +20,10 @@ public class IrGlobalVariable extends IrValue implements IrNode {
         this.constant = constant;
     }
 
+    public IrConstant getConstant() {
+        return constant;
+    }
+
     @Override
     public ArrayList<String> output() {
         //@a = dso_local global i32 97

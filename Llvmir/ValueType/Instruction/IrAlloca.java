@@ -11,7 +11,7 @@ public class IrAlloca extends IrInstruction{
     @Override
     public ArrayList<String> output() {
         ArrayList<String> res = new ArrayList<>();
-        String s = this.getRegisterName() + " = alloca" + this.getType().output().get(0);
+        String s = this.getRegisterName() + " = alloca " + this.getType().output().get(0) + "\n";
         res.add(s);
         return res;
     }

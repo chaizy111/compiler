@@ -10,7 +10,7 @@ public class IrRet extends IrInstruction{
 
     public IrRet() {
         super();
-        result = -1;
+        result = 2147283547;
     }
 
     public void setResult(int result) {
@@ -21,10 +21,12 @@ public class IrRet extends IrInstruction{
     public ArrayList<String> output() {
         ArrayList<String> res = new ArrayList<>();
         String s = "ret ";
-        if(this.getType() instanceof IrVoidTy) {
+        if(this.getType() instanceof IrVoidTy) { // void型
             s = s + this.getType().output().get(0) + "\n";
-        } else {
+        } else if (result != 2147483647){ //常值型
             s = s + this.getType().output().get(0) + " " + result + "\n";
+        } else { // 返回结果存储在寄存器中的类型
+            s = s + this.getType().output().get(0) + " " + this.getRegisterName() + "\n";
         }
         res.add(s);
         return res;

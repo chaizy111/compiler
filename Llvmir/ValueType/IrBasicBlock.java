@@ -26,6 +26,7 @@ public class IrBasicBlock extends IrValue implements IrNode {
     public ArrayList<String> output() {
         ArrayList<String> res = new ArrayList<>();
         for (IrInstruction i:instructions) {
+            if (i.output() == null) continue;
             res.addAll(i.output());
         }
         return res;
