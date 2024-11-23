@@ -10,7 +10,7 @@ public class IrRet extends IrInstruction{
 
     public IrRet() {
         super();
-        result = 2147283547;
+        result = 2147483647;
     }
 
     public void setResult(int result) {

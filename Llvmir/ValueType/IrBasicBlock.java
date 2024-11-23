@@ -22,11 +22,15 @@ public class IrBasicBlock extends IrValue implements IrNode {
         this.instructions.addAll(instructions);
     }
 
+    public ArrayList<IrInstruction> getInstructions() {
+        return instructions;
+    }
+
     @Override
     public ArrayList<String> output() {
         ArrayList<String> res = new ArrayList<>();
         for (IrInstruction i:instructions) {
-            if (i.output() == null) continue;
+            if (i.output() == null || i.output().isEmpty()) continue;
             res.addAll(i.output());
         }
         return res;

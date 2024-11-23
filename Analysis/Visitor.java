@@ -8,9 +8,10 @@ import Llvmir.ValueType.Constant.IrConstantArray;
 import Llvmir.ValueType.Constant.IrConstantVal;
 import Llvmir.ValueType.Function.IrArgument;
 import Llvmir.ValueType.Function.IrFunction;
+import Llvmir.ValueType.Global.IrGlobalConstString;
 import Llvmir.ValueType.Instruction.*;
 import Llvmir.ValueType.IrBasicBlock;
-import Llvmir.ValueType.IrGlobalVariable;
+import Llvmir.ValueType.Global.IrGlobalVariable;
 import Symbol.Symbol;
 import Symbol.SymbolTable;
 import Symbol.Value.ArrayValue;
@@ -460,6 +461,8 @@ public class Visitor {
 
         } else { //val类型，一条IrStore
             IrStore irStore = new IrStore();
+            irStore.setOperand(irAlloca, 0);
+            irStore.setOperand(v, 1);
             instructions.add(irStore);
         }
 
@@ -478,14 +481,14 @@ public class Visitor {
     private Value visitInitVal(InitVal initVal) {
         // TODO：已经实现了对于Initval的存储，现在需要优化代码实现，现在的逻辑有些冗余
         if (initVal.getExp() != null) { // 只有一个Exp
-            visitExp(initVal.getExp());
+            visitExp(initVal.getExp(), false);
             VarValue value = new VarValue();
             value.setItem(initVal.getExp().getAddExp().getResult());
             return value;
         } else if (!initVal.getExpArrayList().isEmpty()) { // 多个Exp
             ArrayValue value = new ArrayValue();
             for (Exp e: initVal.getExpArrayList()) {
-                visitExp(e);
+                visitExp(e, false);
                 value.addItem(e.getAddExp().getResult());
             }
             return value;
@@ -502,11 +505,11 @@ public class Visitor {
     private IrValue visitInitValInFunction(InitVal initVal) {
         //一个Exp用irConstantVal，多个或String型irConstantVal
         if (initVal.getExp() != null) { //只有1个exp
-            return visitExp(initVal.getExp());
+            return visitExp(initVal.getExp(), false);
         } else if (!initVal.getExpArrayList().isEmpty()) { // 多个Exp
             IrValue res = new IrValue();
             for (Exp e: initVal.getExpArrayList()) {
-                IrValue t = visitExp(e);
+                IrValue t = visitExp(e, false);
                 res.addAllTempInstruction(t.getTempInstructions());
                 res.addTempValue(t);
             }
@@ -657,7 +660,7 @@ public class Visitor {
         IrBasicBlock basicBlock = new IrBasicBlock();
         newSymbolTable();
         for (BlockItem b : block.getBlockItemArrayList()) {
-            basicBlock.addAllInstruction(visitBlockItem(b, isInForBlock, funcType).getTempInstructions());
+            basicBlock.addAllTempInstruction(visitBlockItem(b, isInForBlock, funcType).getTempInstructions());
         }
         returnFatherTable();
         return basicBlock;
@@ -679,7 +682,7 @@ public class Visitor {
                 }
 
                 IrRet ret = new IrRet(); // 添加返回指令
-                IrValue v = visitExp(returnStmt.getExp());
+                IrValue v = visitExp(returnStmt.getExp(), false);//根据文法，这里肯定不是左值
                 basicBlock.addAllInstruction(v.getTempInstructions());
                 if (v instanceof IrConstant) {
                     //如果exp是Number或Character,那一层层向上传，最后到达这里的一定是一个IrConstant型的，
@@ -751,7 +754,7 @@ public class Visitor {
         } else if (stmt.getB() != null) {
             return visitBlock(stmt.getB(), isInForBlock, funcType);
         } else if (stmt.getE() != null) {
-            return visitExp(stmt.getE());
+            return visitExp(stmt.getE(), false); //根据文法，这里肯定不是左值
         }
         return new IrValue();
     }
@@ -785,7 +788,7 @@ public class Visitor {
         IrValue res = new IrValue();
         IrRet ret = new IrRet();
         if (returnStmt.getExp() != null) {
-            IrValue v = visitExp(returnStmt.getExp());
+            IrValue v = visitExp(returnStmt.getExp(), false);
             res.addAllTempInstruction(v.getTempInstructions());
             if (v instanceof IrConstant) {
                 //如果exp是Number或Character,那一层层向上传，最后到达这里的一定是一个IrConstant型的，
@@ -816,9 +819,78 @@ public class Visitor {
             int errorLine = printfStmt.getLine();
             errorDealer.errorL(errorLine);
         }
-        //TODO: printf相关实现
+        LinkedList<IrGlobalConstString> str = new LinkedList<>(); //按顺序存储被%d，%c分割出来的常量字符串
+        LinkedList<String> kind = new LinkedList<>(); //存储%d%c的出现顺序
+        LinkedList<IrValue> exps = new LinkedList<>(); //存储一众exp分析的结果
+        String old = printfStmt.getStringConst().getString();
+        int lpos = 0;
+        int rpos = 0;
+        for (;rpos < old.length(); rpos++) { //分割字符串，填str与kind
+            if (old.charAt(rpos) == '%') {
+                if (rpos + 1 < old.length() && (old.charAt(rpos + 1) == 'c' || old.charAt(rpos + 1) == 'd')) {
+                    //构造IrGlobalConstStr，存str
+                    String temp = old.substring(lpos, rpos);
+                    IrGlobalConstString constString = new IrGlobalConstString();
+                    constString.setS(temp);
+                    constString.setLength(temp.length());
+                    if (irModule.getIrGlobalConstStrings().isEmpty()) {
+                        constString.setRegisterName("@.str");
+                    } else {
+                        constString.setRegisterName("@.str." + irModule.getIrGlobalConstStrings().size());
+                    }
+                    str.add(constString);
+                    irModule.addGlobalConstStr(constString); // constStr是需要输出的全局常量，要加到irModule的全局常量字符串表中用来输出
+                    if (old.charAt(rpos) == 'c') { //存kind
+                        kind.add("%c");
+                    } else {
+                        kind.add("%d");
+                    }
+                    //移lpos， rpos
+                    rpos = rpos + 1;
+                    lpos = rpos + 1;
+                }
+            }
+        }
         for (Exp e : printfStmt.getExpArrayList()) {
-            visitExp(e);
+            exps.add(visitExp(e, false)); // 根据文法，这里肯定不是左值
+        }
+        IrValue res = new IrValue();
+        for (int i = 0; i < str.size(); i++) { //实现调用语句
+            if (i + 1 > kind.size()) { // 后边没有参数，则也就只有一个str，只call putstr函数输出当前constStr即可
+                IrCall call = new IrCall();
+                call.setFuncName("@putstr");
+                String s = "i8* getelementptr inbounds ([" +
+                        str.get(i).getLength() +
+                        " x i8], [" +
+                        str.get(i).getLength() +
+                        " x i8]* " +
+                        str.get(i).getRegisterName() +
+                        ", i64 0, i64 0)";
+                call.setParaForPutStr(s);
+                res.addTempInstruction(call);
+            } else { //有参数，则先输出constStr，再输出exp
+                IrCall call1 = new IrCall();
+                call1.setFuncName("@putstr");
+                String s = "i8* getelementptr inbounds ([" +
+                        str.get(i).getLength() +
+                        " x i8], [" +
+                        str.get(i).getLength() +
+                        " x i8]* " +
+                        str.get(i).getRegisterName() +
+                        ", i64 0, i64 0)";
+                call1.setParaForPutStr(s);
+                res.addTempInstruction(call1);
+                IrCall call2 = new IrCall(); //配置putint putch的call，其名字需要根据kind[i]判断，参数数为1，参数从exp[i]获取
+                if (kind.get(i).equals("%d")) {
+                    call2.setFuncName("@putint");
+                } else {
+                    call2.setFuncName("@putch");
+                }
+                call2.setType(new IrVoidTy());
+                call2.setParaNum(1);
+                call2.setOperand(exps.get(i), 0);
+                res.addTempInstruction(call2);
+            }
         }
         return new IrValue();
     }
@@ -831,19 +903,37 @@ public class Visitor {
             int errorLine = t.getLine();
             errorDealer.errorH(errorLine);
         }
-        //再处理LVal
-        //TODO：对于assign型语句，即Lval = exp型的，先通过visitLVal获取左边的值，从返回的IrValue中取出regisiterName用于构建Instruction(注意数组类型)
-        //TODO：再通过visitExp获取右边的值，从返回的IrValue中取出regisiterName用于构建Store Instruction
-        //这里的操作肯定是Store，visitLVal产生op1，这里是要被存入的位置，需要在store类型中转指针，visitExp产生等号右边的值(常量或寄存器)
-        IrValue v1 = visitLVal(lValStmt.getlVal());
-        IrValue v2 = visitExp(lValStmt.getExp());
-        IrInstruction i = new IrStore(); //TODO:IrStore的实现
-        i.setOperand(v1, 0);
-        i.setOperand(v2, 1);
         IrValue res = new IrValue();
-        res.addAllTempInstruction(v2.getTempInstructions());
-        res.addAllTempInstruction(v1.getTempInstructions());
-        res.addTempInstruction(i);
+        if (lValStmt.isGetChar()) { //处理getChar与getInt类型函数调用 //TODO:注意可能的类型转换
+            IrCall call = new IrCall();
+            call.setRegisterName("%" + nowIrFunction.getNowRank()); //不能再if外边设，编号会出问题
+            call.setParaNum(0);
+            call.setFuncName("@getchar");
+            call.setType(new IrIntegerTy());
+            res.setRegisterName(call.getRegisterName());
+            res.addTempInstruction(call);
+        } else if (lValStmt.isGetInt()) {
+            IrCall call = new IrCall();
+            call.setRegisterName("%" + nowIrFunction.getNowRank());
+            call.setParaNum(0);
+            call.setFuncName("@getint");
+            call.setType(new IrIntegerTy());
+            res.setRegisterName(call.getRegisterName());
+            res.addTempInstruction(call);
+        } else {
+            //对于assign型语句，即Lval = exp型的，先通过visitLVal获取左边的值，从返回的IrValue中取出regisiterName用于构建Instruction
+            //TODO:(注意数组类型)
+            //再通过visitExp获取右边的值，返回的IrValue用于构建Store Instruction
+            //这里的操作肯定是Store，visitLVal产生op1，这里是要被存入的位置，需要在store类型中转指针，visitExp产生等号右边的值(常量或寄存器)
+            IrValue v1 = visitLVal(lValStmt.getlVal(), true);
+            IrValue v2 = visitExp(lValStmt.getExp(), false);
+            IrInstruction i = new IrStore();
+            i.setOperand(v1, 0);
+            i.setOperand(v2, 1);
+            res.addAllTempInstruction(v2.getTempInstructions());
+            res.addAllTempInstruction(v1.getTempInstructions());
+            res.addTempInstruction(i);
+        }
         return res;
     }
 
@@ -856,16 +946,16 @@ public class Visitor {
             errorDealer.errorH(errorLine);
         }
         //再处理LVal与exp
-        visitLVal(forStmt.getlVal());
-        visitExp(forStmt.getExp());
+        visitLVal(forStmt.getlVal(), false);
+        visitExp(forStmt.getExp(), false);
     }
 
     //TODO:由只返回一个int的值改为返回一个IrValue，包含过程中分析得到的语句以及最后结果存储的位置，还有exp的类型（用IrType表示的）
-    private IrValue visitExp(Exp exp) {
+    private IrValue visitExp(Exp exp, boolean isLvalue) {
         if (exp == null) {
             return new IrValue();
         }
-        return visitAddExp(exp.getAddExp());
+        return visitAddExp(exp.getAddExp(), isLvalue);
     }
 
     private void visitCond(Cond cond) {
@@ -873,7 +963,7 @@ public class Visitor {
         visitLOrExp(cond.getlOrExp());
     }
 
-    private IrValue visitLVal(LVal lVal) { //TODO:可能要传参数，是否再等号左边
+    private IrValue visitLVal(LVal lVal, boolean isLvalue) { //TODO:可能要传参数，是否再等号左边
         if (lVal == null) return new IrValue();
         //先错误处理
         if (isUnDefinedSymbol(lVal.getIdent().getString())) {
@@ -882,16 +972,17 @@ public class Visitor {
             return new IrValue();
         }
         //根据Indent从symbol中获取寄存器名，分析exp，如果是数组的话需要通过exp的值输出get指令，寄存器也要换成新的
-        IrValue v1 = visitExp(lVal.getExp());
+        IrValue v1 = visitExp(lVal.getExp(), false);
         IrValue v2 = getSymbol(lVal.getIdent().getString()).getIrValue();
         if (lVal.getExp() == null) { // 没有exp说明是确定的变量名，直接返回符号表中存储的IrValue即可 //TODO:左值有可能是变量名
             //注意，如果是全局变量，我们需要新建一个IrValue后，生成load指令后返回
-            if (v2 instanceof IrGlobalVariable) { //TODO：是全局变量并且在等号右边
+            if (v2 instanceof IrGlobalVariable && !isLvalue) { //TODO：是全局变量并且在等号右边,左值不要load
                 IrValue res = new IrValue();
                 IrLoad i = new IrLoad();
                 i.setOperand(v2, 0);
                 i.setType(v2.getType());
                 i.setRegisterName("%" + nowIrFunction.getNowRank());
+                res.setType(i.getType());
                 res.setRegisterName(i.getRegisterName());
                 res.addTempInstruction(i);
                 return res;
@@ -917,14 +1008,14 @@ public class Visitor {
         }
     }
 
-    private IrValue visitPrimaryExp(PrimaryExp primaryExp) { //根据不同种类进行分析并返回得到的IrValue
+    private IrValue visitPrimaryExp(PrimaryExp primaryExp, boolean isLvalue) { //根据不同种类进行分析并返回得到的IrValue
         if (primaryExp == null) {
             return new IrValue();
         }
         if (primaryExp.getExp() != null) {
-            return visitExp(primaryExp.getExp());
+            return visitExp(primaryExp.getExp(), isLvalue);
         } else if (primaryExp.getlVal() != null) {
-            return visitLVal(primaryExp.getlVal());
+            return visitLVal(primaryExp.getlVal(), isLvalue);
         } else if (primaryExp.getNumber() != null) {
             return visitNumber(primaryExp.getNumber());
         } else if (primaryExp.getCharacter() != null) {
@@ -945,16 +1036,16 @@ public class Visitor {
         return res;
     }
 
-    private IrValue visitUnaryExp(UnaryExp unaryExp) {
+    private IrValue visitUnaryExp(UnaryExp unaryExp, boolean isLvalue) {
         if (unaryExp == null) {
             return new IrValue();
         }
         if (unaryExp.getPrimaryExp() != null) {
-            return visitPrimaryExp(unaryExp.getPrimaryExp());
+            return visitPrimaryExp(unaryExp.getPrimaryExp(), isLvalue);
         } else if (unaryExp.getUnaryExp() != null) {
             //分析unaryOp的种类来决定下一步的操作，如果是+或者!则不生成语句，如果是-生成一个与0相减的语句
             int judge = visitUnaryOp(unaryExp.getUnaryOp());
-            IrValue v = visitUnaryExp(unaryExp.getUnaryExp());
+            IrValue v = visitUnaryExp(unaryExp.getUnaryExp(), isLvalue);
             if (judge == 1) { //生成一条sub语句并实现value的更新,注意这里没有保存计算结果，可能会出现bug
                 IrConstantVal zero = new IrConstantVal(0);
                 zero.setType(v.getType()); //Type和后边的数保持一致
@@ -1026,12 +1117,12 @@ public class Visitor {
         if (funcRParams == null) return null;
         ArrayList<IrValue> l = new ArrayList<>();
         for (Exp e: funcRParams.getExpArrayList()) {
-            l.add(visitExp(e));
+            l.add(visitExp(e, false)); //根据文法，这里的exp肯定不是左值
         }
         return l;
     }
 
-    private IrValue visitMulExp(MulExp mulExp) {
+    private IrValue visitMulExp(MulExp mulExp, boolean isLvalue) {
         IrValue res = new IrValue();
         if (mulExp == null) {
             return res;
@@ -1040,11 +1131,12 @@ public class Visitor {
         for (int i = 0; i < mulExp.getUnaryExpArrayList().size(); i++) { //TODO:注意constant类型的数
             UnaryExp u = mulExp.getUnaryExpArrayList().get(i);
             if(i == 0) { // 返回第一个unaryExp的类型即可
-                v1 = visitUnaryExp(u);
+                v1 = visitUnaryExp(u, isLvalue);
+                if (mulExp.getUnaryExpArrayList().size() == 1) return v1; //只有一个操作数，直接返回即可
                 res.setType(v1.getType());
                 res.addAllTempInstruction(v1.getTempInstructions());
             } else { //其他的也需要分析，可能会有错误出现
-                v2 = visitUnaryExp(u);
+                v2 = visitUnaryExp(u, isLvalue);
                 res.addAllTempInstruction(v2.getTempInstructions());
                 //根据对应符号实现mul、div、 mod语句的生成并添加到res的tempInstructions中
                 IrBinaryOp instruction = new IrBinaryOp();
@@ -1068,7 +1160,7 @@ public class Visitor {
         return res;
     }
 
-    private IrValue visitAddExp(AddExp addExp) {
+    private IrValue visitAddExp(AddExp addExp, boolean isLvalue) {
         IrValue res = new IrValue();
         if (addExp == null) {
             return res;
@@ -1076,12 +1168,13 @@ public class Visitor {
         IrValue v1 = new IrValue(), v2;
         for (int i = 0; i < addExp.getMulExpArrayList().size(); i++) { //TODO:注意constant类型的数
             MulExp m = addExp.getMulExpArrayList().get(i);
-            if(i == 0) { // 返回第一个unaryExp的类型即可
-                v1 = visitMulExp(m);
+            if(i == 0) { // 返回第一个mulExp的类型即可
+                v1 = visitMulExp(m, isLvalue);
+                if (addExp.getMulExpArrayList().size() == 1) return v1; //只有一个mulExp，直接返回v1
                 res.setType(v1.getType());
                 res.addAllTempInstruction(v1.getTempInstructions());
             } else { //其他的也需要分析，可能会有错误出现
-                v2 = visitMulExp(m);
+                v2 = visitMulExp(m, isLvalue);
                 res.addAllTempInstruction(v2.getTempInstructions());
                 //根据对应符号实现add, sub语句的生成并添加到res的tempInstructions中
                 IrBinaryOp instruction = new IrBinaryOp();
@@ -1104,13 +1197,13 @@ public class Visitor {
     }
 
     private IrValue visitConstExp(ConstExp constExp) {
-        return visitAddExp(constExp.getAddExp());
+        return visitAddExp(constExp.getAddExp(), false); // 根据文法肯定不是左值
     }
 
     //TODO： 下边所有的visit方法均与位运算相关，本次作业不涉及，大致实现应该与visitAddExp类似
     private void visitRelExp(RelExp relExp) {
         for (AddExp a: relExp.getAddExpArrayList()) {
-            visitAddExp(a);
+            visitAddExp(a, false);
         }
     }
 

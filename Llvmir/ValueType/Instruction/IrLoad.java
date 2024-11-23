@@ -18,7 +18,7 @@ public class IrLoad extends IrInstruction{
         ptr.setType(v.getType());
         ArrayList<String> res = new ArrayList<>();
         String s = this.getRegisterName() + " = load " + this.getType().output().get(0) +
-                ", " + ptr.output().get(0) + v.getRegisterName() + "\n";
+                ", " + ptr.output().get(0) + " " + v.getRegisterName() + "\n";
         res.add(s);
         return res;
     }

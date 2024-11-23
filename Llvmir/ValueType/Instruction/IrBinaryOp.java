@@ -22,8 +22,13 @@ public class IrBinaryOp extends IrInstruction{
         IrValue l = this.getOperand(0);
         IrValue r = this.getOperand(1);
         String s;
-        String left = l.getRegisterName();
+        String left;
         String right;
+        if (l instanceof IrConstantVal) {
+            left = String.valueOf(((IrConstantVal) l).getVal());
+        } else {
+            left = l.getRegisterName();
+        }
         if (r instanceof IrConstantVal) {
             right = String.valueOf(((IrConstantVal) r).getVal());
         } else {
@@ -31,13 +36,13 @@ public class IrBinaryOp extends IrInstruction{
         }
         switch (operationTy) {
             case Add:
-                s = this.getRegisterName() + " = add " + l.getType().output().get(0) + " " + left + ", " + right + "\n";
+                s = this.getRegisterName() + " = add nsw " + l.getType().output().get(0) + " " + left + ", " + right + "\n";
                 break;
             case Sub:
-                s = this.getRegisterName() + " = sub " + l.getType().output().get(0) + " " + left + ", " + right + "\n";
+                s = this.getRegisterName() + " = sub nsw " + l.getType().output().get(0) + " " + left + ", " + right + "\n";
                 break;
             case Mul:
-                s = this.getRegisterName() + " = mul " + l.getType().output().get(0) + " " + left + ", " + right + "\n";
+                s = this.getRegisterName() + " = mul nsw " + l.getType().output().get(0) + " " + left + ", " + right + "\n";
                 break;
             case Div:
                 s = this.getRegisterName() + " = sdiv " + l.getType().output().get(0) + " " + left + ", " + right + "\n";

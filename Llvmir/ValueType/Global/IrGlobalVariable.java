@@ -1,4 +1,4 @@
-package Llvmir.ValueType;
+package Llvmir.ValueType.Global;
 
 import Llvmir.IrNode;
 import Llvmir.IrValue;
