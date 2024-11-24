@@ -10,21 +10,15 @@ import java.util.ArrayList;
 import java.util.LinkedList;
 
 public class IrFunction extends IrValue implements IrNode {
-    private IrFunctionTy type;
     private LinkedList<IrArgument> arguments;
     private IrBasicBlock irBlock;
     private CntUtils cntUtils;
 
     public IrFunction() {
         super();
-        type = null;
         arguments = new LinkedList<>();
         irBlock = null;
         cntUtils = new CntUtils();
-    }
-
-    public void setType(IrFunctionTy type) {
-        this.type = type;
     }
 
     public void setArguments(LinkedList<IrArgument> arguments) {
@@ -42,7 +36,7 @@ public class IrFunction extends IrValue implements IrNode {
     @Override
     public ArrayList<String> output() {
         ArrayList<String> res = new ArrayList<>();
-        StringBuilder s = new StringBuilder("define dso_local " + type.output().get(0) + " " + this.getName());
+        StringBuilder s = new StringBuilder("define dso_local " + this.getType().output().get(0) + " " + this.getName());
         if(arguments.isEmpty()) {
             s.append("() {\n");
         } else {

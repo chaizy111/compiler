@@ -22,6 +22,7 @@ public class IrValue {
 
     public IrValue() {
         tempInstructions = new ArrayList<>();
+        tempValues = new ArrayList<>();
     }
 
     public void setRegisterName(String registerName) {
@@ -54,6 +55,10 @@ public class IrValue {
 
     public void addTempValue(IrValue irValue) {
         tempValues.add(irValue);
+    }
+
+    public void setTempValues(ArrayList<IrValue> tempValues) {
+        this.tempValues = tempValues;
     }
 
     public ArrayList<IrValue> getTempValues() {

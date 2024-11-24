@@ -15,21 +15,23 @@ public class IrGlobalConstString extends IrValue implements IrNode {
     }
 
     public void setS(String s) { // 注意 LLVM IR 中需要对 \n 和 \0 等进行转义
-        String old1 = "\n";
-        String old2 = " ";
+        String old1 = "\\n";
         String new1 = "\\0A";
-        String new2 = "\\00";
         String r1 = s.replace(old1, new1);
-        String r2 = r1.replace(old2, new2);
-        this.s = r2;
+        this.s = r1 + "\\00";
     }
 
     public String getS() {
         return s;
     }
 
-    public void setLength(int length) {
-        this.length = length;
+    public void setLength() {
+        String old1 = "\\0A";
+        String new1 = "n";
+        String old2 = "\\00";
+        String new2 = " ";
+        String t1 = s;
+        this.length = t1.replace(old1, new1).replace(old2, new2).length();
     }
 
     public int getLength() {
@@ -40,7 +42,7 @@ public class IrGlobalConstString extends IrValue implements IrNode {
     @Override
     public ArrayList<String> output() {
         ArrayList<String> res = new ArrayList<>();
-        String s1 = this.getRegisterName() + " = private unnamed_addr constant [" + length + " x i8 c\"" + s + "\", align 1\n";
+        String s1 = this.getRegisterName() + " = private unnamed_addr constant [" + length + " x i8] c\"" + s + "\", align 1\n";
         res.add(s1);
         return res;
     }

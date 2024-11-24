@@ -22,9 +22,9 @@ public class IrStore extends IrInstruction{
         } else {
             right = r.getRegisterName();
         }
-        IrPointerTy t = new IrPointerTy();
+        IrPointerTy t = new IrPointerTy(); //为了保证store ty1, ty2*中ty1==ty2我们统一用ty1的类型
         t.setType(l.getType());
-        String s = "store " + r.getType().output().get(0) + " " + right + ", " + t.output().get(0) + " " + l.getRegisterName() + "\n";
+        String s = "store " + l.getType().output().get(0) + " " + right + ", " + t.output().get(0) + " " + l.getRegisterName() + "\n";
         res.add(s);
         return res;
     }

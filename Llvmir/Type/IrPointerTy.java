@@ -13,6 +13,10 @@ public class IrPointerTy extends IrType {
         this.type = type;
     }
 
+    public IrType getType() {
+        return type;
+    }
+
     @Override
     public ArrayList<String> output() {
         ArrayList<String> res = new ArrayList<>();

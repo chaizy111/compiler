@@ -1,6 +1,7 @@
 package Llvmir.ValueType.Instruction;
 
 import Llvmir.IrValue;
+import Llvmir.Type.IrArrayTy;
 import Llvmir.Type.IrVoidTy;
 
 import java.util.ArrayList;
@@ -37,12 +38,13 @@ public class IrCall extends IrInstruction{
             s.append(paraForPutStr);
         } else {
             if (this.getType() instanceof IrVoidTy) { // void 型， 没有返回值，不需要用到registerName
-                s.append("call void ");
+                s.append("call void");
             } else { //有返回值，要写成“%i = call”型
                 s.append(this.getRegisterName());
                 s.append(" = call ");
                 s.append(this.getType().output().get(0));
             }
+            s.append(" ");
             s.append(funcName);
             s.append("(");
             for (int i = 0; i < paraNum; i++) { //参数的输出
