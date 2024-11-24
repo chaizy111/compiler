@@ -57,6 +57,7 @@ public class Visitor {
     //TODO：2.对于局部变量，我们首先需要通过 alloca 指令分配一块内存，才能对其进行 load/store 操作
     //TODO：3.对于局部变量，要注意类型转换的情况
     //TODO：4.修改各个exp中getResult的逻辑，需要符号表的参与
+    //TODO：5.debug时要注意的一个点，返回的IrValue寄存器名的设置不要有遗漏
     //TODO：将symbol相关方法拿出去（不重要，最后再做）
     public void visit() throws IOException {
         // 先建好第一个symbolTable，再visitCompUnit，最后输出
@@ -1059,8 +1060,10 @@ public class Visitor {
             }
             return v;
         } else if (unaryExp.getIdent() != null) {
-            //TODO：这个部分生成函数调用相关语句,构架一个IrValue并返回        //TODO：对于getint和getchar要实现call语句
+            //TODO：这个部分生成函数调用相关语句,构架一个IrValue并返回
             Token t = unaryExp.getIdent();
+            IrValue res = new IrValue();
+            ArrayList<IrValue> paraList = new ArrayList<>();
             // 先处理错误c
             if (isUnDefinedSymbol(t.getString())) {
                 int errorLine = t.getLine();
@@ -1068,8 +1071,6 @@ public class Visitor {
             } else {
                 Symbol s = getSymbol(t.getString());
                 FuncValue sValue = (FuncValue) s.getValue();
-                IrValue res = new IrValue();
-                ArrayList<IrValue> paraList;
                 //再处理错误d
                 if (unaryExp.getFuncRParams() != null) {
                     paraList = visitFuncRParams(unaryExp.getFuncRParams());
@@ -1093,9 +1094,14 @@ public class Visitor {
                         res.addAllTempInstruction(paraList.get(i).getTempInstructions());
                     }
                 }
-                IrCall call = new IrCall(); //TODO:call指令的具体实现
+                IrCall call = new IrCall(); //完成call指令并填到value的指令集合中
                 call.setType(s.getIrValue().getType());
                 call.setRegisterName("%" + nowIrFunction.getNowRank());
+                call.setParaNum(paraList.size());
+                call.setFuncName(t.getString());
+                for (int i = 0; i < paraList.size(); i++) { // 配置参数
+                    call.setOperand(paraList.get(i), i);
+                }
                 res.addTempInstruction(call);
                 res.setRegisterName(call.getRegisterName());//一定要更新返回IrValue的寄存器名
                 res.setType(call.getType());
