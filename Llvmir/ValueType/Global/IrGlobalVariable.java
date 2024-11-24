@@ -3,6 +3,7 @@ package Llvmir.ValueType.Global;
 import Llvmir.IrNode;
 import Llvmir.IrValue;
 import Llvmir.Type.IrArrayTy;
+import Llvmir.Type.IrPointerTy;
 import Llvmir.Type.IrType;
 import Llvmir.ValueType.Constant.IrConstant;
 
@@ -10,10 +11,15 @@ import java.util.ArrayList;
 
 public class IrGlobalVariable extends IrValue implements IrNode {
     private IrConstant constant; // 初始化的值
+    private IrType outputType;
 
     public IrGlobalVariable(String name) {
         super();
         this.setName(name);
+    }
+
+    public void setOutputType(IrType outputType) {
+        this.outputType = outputType;
     }
 
     public void setConstant(IrConstant constant) {
@@ -35,18 +41,18 @@ public class IrGlobalVariable extends IrValue implements IrNode {
         if (this.getType() instanceof IrArrayTy) { // 是数组型全局常量（变量）
             String s;
             if(constant != null) {//被赋初值
-                s = this.getName() + " = dso_local global " + this.getType().output().get(0) + constant.output().get(0) + "\n";
+                s = this.getName() + " = dso_local global " + outputType.output().get(0) + constant.output().get(0) + "\n";
             } else {//未被赋初值(赋0)
-                s = this.getName() + " = dso_local global " + this.getType().output().get(0) + " zeroinitializer" + "\n";
+                s = this.getName() + " = dso_local global " + outputType.output().get(0) + " zeroinitializer" + "\n";
             }
             res.add(s);
         } else {//不是数组型全局常量（变量）
             String s;
             if(constant != null) {//被赋初值
-                s = this.getName() + " = dso_local global " + this.getType().output().get(0) +
+                s = this.getName() + " = dso_local global " + outputType.output().get(0) +
                         " " + constant.output().get(0) + "\n";
             } else {//未被赋初值(赋0)
-                s = this.getName() + " = dso_local global " + this.getType().output().get(0) +
+                s = this.getName() + " = dso_local global " + outputType.output().get(0) +
                         " 0" + "\n";
             }
             res.add(s);

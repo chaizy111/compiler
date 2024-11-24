@@ -47,4 +47,9 @@ public class AddExp extends Node {
         }
         return sum;
     }
+
+    public boolean isUseful() {
+        Token t = mulExpArrayList.get(0).getUnaryExpArrayList().get(0).getIdent();
+        return t != null;
+    }
 }

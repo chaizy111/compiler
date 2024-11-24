@@ -14,11 +14,9 @@ public class IrLoad extends IrInstruction{
     @Override
     public ArrayList<String> output() {
         IrValue v = this.getOperand(0);
-        IrPointerTy ptr = new IrPointerTy();
-        ptr.setType(v.getType());
         ArrayList<String> res = new ArrayList<>();
         String s = this.getRegisterName() + " = load " + this.getType().output().get(0) +
-                ", " + ptr.output().get(0) + " " + v.getRegisterName() + "\n";
+                ", " + v.getType().output().get(0) + " " + v.getRegisterName() + "\n";
         res.add(s);
         return res;
     }

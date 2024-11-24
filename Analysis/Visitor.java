@@ -259,26 +259,6 @@ public class Visitor {
         else s.setBtype(1);
         s.setConst(true);
 
-        IrType t; // 判断该符号的种类
-        if (s.getBtype() == 0) {
-            t = new IrIntegerTy();
-        } else {
-            t = new IrCharTy();
-        }
-        IrArrayTy nt = new IrArrayTy();
-        if (s.getArraySize() != 0) {
-            nt.setArrayType(t);
-            nt.setArraySize(s.getArraySize());
-            t = nt;
-        }
-
-        IrAlloca irAlloca = new IrAlloca(); //先分配内存，将内存分配指令alloca填到list中，并将这个内存分配指令作为该符号的IrValue
-        irAlloca.setType(t);
-        irAlloca.setType(nt);
-        irAlloca.setRegisterName("%" + nowIrFunction.getNowRank());
-        instructions.add(irAlloca);
-        s.setIrValue(irAlloca);
-
         IrValue v = visitConstInitValInFunction(constDef.getConstInitVal());
         instructions.addAll(v.getTempInstructions()); // 分析右边部分，将产生的代码放到list中
         s.setIrValue(v);
@@ -393,7 +373,10 @@ public class Visitor {
         } else {
             t = new IrCharTy();
         }
-        irGlobalVariable.setType(t);
+        irGlobalVariable.setOutputType(t);
+        IrPointerTy pt = new IrPointerTy();
+        pt.setType(t);
+        irGlobalVariable.setType(pt); //全局变量的type也是指针
         if (s.getValue() != null) {
             if (s.getArraySize() == 0) { // 非数组型
                 IrConstant constant = new IrConstantVal(((VarValue) s.getValue()).getItem());
@@ -411,7 +394,7 @@ public class Visitor {
                 IrArrayTy nt = new IrArrayTy();
                 nt.setArrayType(t);
                 nt.setArraySize(s.getArraySize());
-                irGlobalVariable.setType(nt);
+                irGlobalVariable.setOutputType(nt);
             }
         } else {
             irGlobalVariable.setConstant(null);
@@ -448,45 +431,50 @@ public class Visitor {
             nt.setArraySize(s.getArraySize());
             t = nt;
         }
+        IrPointerTy pointerTy = new IrPointerTy();
+        pointerTy.setType(t);
 
         IrAlloca irAlloca = new IrAlloca(); //先分配内存，将内存分配指令alloca填到list中，并将这个内存分配指令作为该符号的IrValue
-        irAlloca.setType(t);
+        irAlloca.setAllocaType(t);
+        irAlloca.setType(pointerTy); //irAlloca得到指针型的数据，所以其真正类型只有一个，即指针，t与nt都是用来输出的
         irAlloca.setRegisterName("%" + nowIrFunction.getNowRank());
         instructions.add(irAlloca);
 
-        IrValue v = visitInitValInFunction(valDef.getInitVal());
-        instructions.addAll(v.getTempInstructions()); // 分析右边部分，将产生的代码放到list中
-        //与constVarDef的区别，varDef不能直接使用，必须输出store语句进行store存储
-        if (s.getArraySize() != 0) { //数组类型，多条IrStore与getelementptr指令组合
-            ArrayList<IrValue> irValues = v.getTempValues();
-            irAlloca.setTempValues(irValues); //数组型要在符号表中存的irValue进行配置，将诸irValue存起来备用
-            for (int i = 0; i < irValues.size(); i++) {
-                IrGetelementptr irGetelementptr = new IrGetelementptr(); //先配置getelementptr指令
-                irGetelementptr.setExc(i);
-                IrType temp = irAlloca.getType();
-                //irGetelement的type需要特判，如果是Array与pointer的type，我们需要拿出其内部存储的type作为该指令的type
-                if (temp instanceof IrArrayTy) {
-                    irGetelementptr.setType(((IrArrayTy) temp).getArrayType());
-                } else if (temp instanceof IrPointerTy) {
-                    irGetelementptr.setType(((IrPointerTy) temp).getType());
-                } else {
-                    irGetelementptr.setType(irAlloca.getType()); //这里type与alloca的一致
+        if (valDef.getInitVal() != null) { //valDef可能没有等号和等号右边的部分！！！
+            IrValue v = visitInitValInFunction(valDef.getInitVal());
+            instructions.addAll(v.getTempInstructions()); // 分析右边部分，将产生的代码放到list中
+            //与constVarDef的区别，varDef不能直接使用，必须输出store语句进行store存储
+            if (s.getArraySize() != 0) { //数组类型，多条IrStore与getelementptr指令组合
+                ArrayList<IrValue> irValues = v.getTempValues();
+                irAlloca.setTempValues(irValues); //数组型要在符号表中存的irValue进行配置，将诸irValue存起来备用
+                for (int i = 0; i < irValues.size(); i++) {
+                    IrGetelementptr irGetelementptr = new IrGetelementptr(); //先配置getelementptr指令
+                    irGetelementptr.setExc(i);
+                    irGetelementptr.setType(irAlloca.getType()); //实际返回的type就是与alloca同样的指针type
+                    IrType temp = irAlloca.getAllocaType();
+                    //irGetelement在output使用的type需要特判，如果是Array与pointer的type，我们需要拿出其内部存储的type作为该指令的type
+                    if (temp instanceof IrArrayTy) {
+                        irGetelementptr.setOutputType(((IrArrayTy) temp).getArrayType());
+                    } else if (temp instanceof IrPointerTy) {
+                        irGetelementptr.setOutputType(((IrPointerTy) temp).getType());
+                    } else {
+                        irGetelementptr.setOutputType(temp); //这里type与alloca的一致
+                    }
+                    irGetelementptr.setOperand(irAlloca, 0);
+                    irGetelementptr.setRegisterName("%" + nowIrFunction.getNowRank());
+                    instructions.add(irGetelementptr);
+                    IrStore irStore = new IrStore(); //数组def时紧跟在getptr指令后边的就是一条store指令
+                    irStore.setOperand(irGetelementptr, 0);
+                    irStore.setOperand(irValues.get(i), 1); //返回的irValues的第i个，即exp的第i个
+                    instructions.add(irStore);
                 }
-                irGetelementptr.setOperand(irAlloca, 0);
-                irGetelementptr.setRegisterName("%" + nowIrFunction.getNowRank());
-                instructions.add(irGetelementptr);
-                IrStore irStore = new IrStore(); //数组def时紧跟在getptr指令后边的就是一条store指令
-                irStore.setOperand(irGetelementptr, 0);
-                irStore.setOperand(irValues.get(i), 1); //返回的irValues的第i个，即exp的第i个
+            } else { //val类型，一条IrStore
+                IrStore irStore = new IrStore();
+                irStore.setOperand(irAlloca, 0);
+                irStore.setOperand(v, 1);
                 instructions.add(irStore);
             }
-        } else { //val类型，一条IrStore
-            IrStore irStore = new IrStore();
-            irStore.setOperand(irAlloca, 0);
-            irStore.setOperand(v, 1);
-            instructions.add(irStore);
         }
-
         //错误处理
         if(isDuplicateSymbol(s.getSymbolName())) {
             int errorLine = valDef.getIdent().getLine();
@@ -584,9 +572,6 @@ public class Visitor {
         s.setValue(v);
         // 从v中取出关于参数的描述，给每个参数分配临时寄存器之后加到irFunction中
         LinkedList<IrArgument> temp = ((FuncValue) v).getArguments();
-        if (temp.isEmpty()) { // 没有参数的从0开始
-            nowIrFunction.getNowRank();
-        }
         for(int i = 0; i < temp.size(); i++) {
             IrArgument a = temp.get(i);
             a.setRank(function.getNowRank());
@@ -594,6 +579,7 @@ public class Visitor {
         }
         function.setArguments(temp);
         // 分析后边的block，需要将函数是否为void类型传入函数以供后续判断
+        nowIrFunction.getNowRank();//这里是给函数入口留一个寄存器号
         function.setIrBlock(visitFuncBlock(funcDef.getBlock(), bType));
         function.setRegisterName("-1");
         s.setIrValue(function);
@@ -662,12 +648,14 @@ public class Visitor {
         } else {
             t = new IrCharTy();
         }
-        if (funcFParam.isArray()) {
-            IrPointerTy type = new IrPointerTy();
-            type.setType(t);
-            t = type;
-        }
-        argument.setType(t);
+//        if (funcFParam.isArray()) {
+//            IrPointerTy type = new IrPointerTy();
+//            type.setType(t);
+//            t = type;
+//        }
+        IrPointerTy ty = new IrPointerTy();
+        ty.setType(t);
+        argument.setType(ty);
         argument.setName(s.getSymbolName());
         s.setIrValue(argument); //配置完成后将argument加到symbol中
         return argument;
@@ -776,7 +764,10 @@ public class Visitor {
         } else if (stmt.getB() != null) {
             return visitBlock(stmt.getB(), isInForBlock, funcType);
         } else if (stmt.getE() != null) {
-            return visitExp(stmt.getE(), false); //根据文法，这里肯定不是左值
+            //if (stmt.getE().getAddExp().isUseful()) { //这里判断exp是否有用，防止出现在一行有 1+0;这种语句出现，这种语句出现就直接忽略
+                //判断的逻辑就是看是不是函数，如果不是函数就直接忽略(暂时不用，优化的时候可以用)
+                return visitExp(stmt.getE(), false); //根据文法，这里肯定不是左值
+            //}
         }
         return new IrValue();
     }
@@ -955,9 +946,8 @@ public class Visitor {
             res.addTempInstruction(call);
         } else {
             //对于assign型语句，即Lval = exp型的，先通过visitLVal获取左边的值，从返回的IrValue中取出regisiterName用于构建Instruction
-            //TODO:(注意数组类型)
             //再通过visitExp获取右边的值，返回的IrValue用于构建Store Instruction
-            //这里的操作肯定是Store，visitLVal产生op1，这里是要被存入的位置，需要在store类型中转指针，visitExp产生等号右边的值(常量或寄存器)
+            //这里的操作肯定是Store，visitLVal产生op1，这里是要被存入的位置，我们需要保证op1一定是指针类型，visitExp产生等号右边的值(常量或寄存器)
             IrValue v1 = visitLVal(lValStmt.getlVal(), true);
             IrValue v2 = visitExp(lValStmt.getExp(), false);
             IrInstruction i = new IrStore();
@@ -1009,7 +999,7 @@ public class Visitor {
         IrValue v1 = visitExp(lVal.getExp(), false);
         IrValue v2 = getSymbol(lVal.getIdent().getString()).getIrValue();
         Symbol s = getSymbol(lVal.getIdent().getString());
-        if (lVal.getExp() == null) { // 没有exp说明是确定的变量名，直接返回符号表中存储的IrValue即可
+        if (lVal.getExp() == null) { // 没有exp说明是确定的变量名，通过load构造一个新的IrValue后返回
             //如果lVal没有exp，也有可能是直接传了一个数组，这里需要先处理这种情况
             if (s.getArraySize() > 0) { //是数组类型的，我们需要getelementptr，返回一个指针型
                 IrValue res = new IrValue();
@@ -1019,6 +1009,7 @@ public class Visitor {
                 IrPointerTy t = new IrPointerTy();
                 t.setType(((IrArrayTy) temp).getArrayType());
                 i.setType(t);
+                i.setOutputType(t); //这里outputtype与i返回的type是一致的
                 i.setOperand(v2, 0);
                 i.setRegisterName("%" + nowIrFunction.getNowRank());
                 res.setType(i.getType());
@@ -1027,18 +1018,18 @@ public class Visitor {
                 return res;
             }
             //注意，如果是全局变量，我们需要新建一个IrValue后，生成load指令后返回
-            if (v2 instanceof IrGlobalVariable && !isLvalue) { //是全局变量并且在等号右边,左值不要load
-                IrValue res = new IrValue(); //TODO：按照示例的写法，这里不是全局变量也要load，这里先不load，看看结果
+            if (!isLvalue) { //左值不要load，从其被alloca或在全局被分配的指针中load值，构造IrValue返回
+                IrValue res = new IrValue();
                 IrLoad l = new IrLoad();
-                l.setOperand(v2, 0);
-                l.setType(v2.getType());
+                l.setOperand(v2, 0); //给load分配的操作数应该是指针类型的
+                l.setType(((IrPointerTy) v2.getType()).getType());
                 l.setRegisterName("%" + nowIrFunction.getNowRank());
                 res.setType(l.getType());
                 res.setRegisterName(l.getRegisterName());
                 res.addTempInstruction(l);
                 return res;
             }
-            return v2; //是左值或局部变量直接返回
+            return v2; //是左值直接返回
         } else { //数组元素不管是不是左值都要load
             //否则为数组元素，先实现一个getptr指令，再load，再配置IrValue并返回
             //先通过v1得到数组元素的位次号，从IrConstantArray类型中取出对应的IrConstntVal作为res的IrValue
@@ -1055,15 +1046,20 @@ public class Visitor {
             res.setType(v1.getType());
             IrGetelementptr i = new IrGetelementptr(); //配置Getelementptr
             i.setExc(index);
+            IrPointerTy pointerTy = new IrPointerTy();
             IrType temp = v2.getType();
             //irGetelement的type需要特判，如果是Array与pointer的type，我们需要拿出其内部存储的type作为该指令的type
             if (temp instanceof IrArrayTy) {
-                i.setType(((IrArrayTy) temp).getArrayType());
+                pointerTy.setType(((IrArrayTy) temp).getArrayType());
+                i.setType(pointerTy);
             } else if (temp instanceof IrPointerTy) {
-                i.setType(((IrPointerTy) temp).getType());
+                pointerTy.setType(((IrPointerTy) temp).getType());
+                i.setType(pointerTy);
             } else {
-                i.setType(v2.getType()); //这里type与alloca的一致
+                pointerTy.setType(v2.getType());
+                i.setType(pointerTy); //这里type与alloca的一致
             }
+            i.setOutputType(i.getType()); //这里outputtype与i返回的type是一致的
             i.setOperand(v2, 0);
             i.setRegisterName("%" + nowIrFunction.getNowRank());
             res.addTempInstruction(i);
@@ -1167,7 +1163,7 @@ public class Visitor {
                 call.setType(((IrFunctionTy) s.getIrValue().getType()).getFuncType());
                 call.setRegisterName("%" + nowIrFunction.getNowRank());
                 call.setParaNum(paraList.size());
-                call.setFuncName(t.getString());
+                call.setFuncName("@" + t.getString());
                 for (int i = 0; i < paraList.size(); i++) { // 配置参数
                     call.setOperand(paraList.get(i), i);
                 }

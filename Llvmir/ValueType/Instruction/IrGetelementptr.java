@@ -1,10 +1,12 @@
 package Llvmir.ValueType.Instruction;
 
 import Llvmir.Type.IrPointerTy;
+import Llvmir.Type.IrType;
 
 import java.util.ArrayList;
 
 public class IrGetelementptr extends IrInstruction{
+    private IrType outputType; // output时专门使用的type
     private int exc; //数组的偏移量，默认为0
 
     public IrGetelementptr() {
@@ -14,6 +16,10 @@ public class IrGetelementptr extends IrInstruction{
 
     public void setExc(int exc) {
         this.exc = exc;
+    }
+
+    public void setOutputType(IrType outputType) {
+        this.outputType = outputType;
     }
 
     public int getExc() {
@@ -28,10 +34,10 @@ public class IrGetelementptr extends IrInstruction{
         StringBuilder s = new StringBuilder();
         s.append(this.getRegisterName());
         s.append(" = getelementptr inbounds ");
-        s.append(this.getType().output().get(0));
+        s.append(outputType.output().get(0));
         s.append(", ");
         IrPointerTy t = new IrPointerTy();
-        t.setType(this.getType());
+        t.setType(outputType);
         s.append(t.output().get(0));
         s.append(" ");
         s.append(this.getOperand(0).getRegisterName());
