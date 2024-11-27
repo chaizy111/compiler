@@ -4,6 +4,7 @@ import Llvmir.IrNode;
 import Llvmir.IrValue;
 import Llvmir.Type.IrFunctionTy;
 import Llvmir.Type.IrType;
+import Llvmir.ValueType.Instruction.IrInstruction;
 import Llvmir.ValueType.IrBasicBlock;
 
 import java.util.ArrayList;
@@ -49,6 +50,9 @@ public class IrFunction extends IrValue implements IrNode {
             s.append(") {\n");
         }
         res.add(s.toString());
+        for (IrInstruction i : this.getTempInstructions()) { //参数初始化语句
+            res.addAll(i.output());
+        }
         res.addAll(irBlock.output());
         res.add("}\n");
         return res;

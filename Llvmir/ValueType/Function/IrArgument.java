@@ -2,6 +2,7 @@ package Llvmir.ValueType.Function;
 
 import Llvmir.IrNode;
 import Llvmir.IrValue;
+import Llvmir.Type.IrPointerTy;
 import Llvmir.Type.IrType;
 
 import java.util.ArrayList;

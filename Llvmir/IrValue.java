@@ -1,6 +1,7 @@
 package Llvmir;
 
 import Llvmir.Type.*;
+import Llvmir.ValueType.Constant.IrConstant;
 import Llvmir.ValueType.Instruction.IrInstruction;
 import Symbol.Value.Value;
 
@@ -19,10 +20,29 @@ public class IrValue {
 
     private ArrayList<IrValue> tempValues;
     //用于initVal类型语句在basicBlock中传递values
+    private IrConstant constant;
 
     public IrValue() {
         tempInstructions = new ArrayList<>();
         tempValues = new ArrayList<>();
+        isConst = false;
+    }
+
+    public IrValue(IrValue v) {
+        this.type = v.getType();
+        this.name = v.getName();
+        this.tempValues = v.tempValues;
+        this.registerName = v.getRegisterName();
+        this.tempInstructions = v.getTempInstructions();
+        this.isConst = v.isConst;
+    }
+
+    public void setConstant(IrConstant constant) {
+        this.constant = constant;
+    }
+
+    public IrConstant getConstant() {
+        return constant;
     }
 
     public void setRegisterName(String registerName) {
@@ -39,6 +59,10 @@ public class IrValue {
 
     public void setConst(boolean aConst) { //TODO: 在定义的时候要注意配置这个属性，用于错误判断，对于代码生成并无作用
         isConst = aConst;
+    }
+
+    public boolean isConst() {
+        return isConst;
     }
 
     public IrType getType() {

@@ -3,6 +3,7 @@ package Llvmir.ValueType.Instruction;
 import Llvmir.IrValue;
 import Llvmir.Type.IrArrayTy;
 import Llvmir.Type.IrVoidTy;
+import Llvmir.ValueType.Constant.IrConstantVal;
 
 import java.util.ArrayList;
 
@@ -51,7 +52,11 @@ public class IrCall extends IrInstruction{
                 IrValue v = this.getOperand(i);
                 s.append(v.getType().output().get(0));
                 s.append(" ");
-                s.append(v.getRegisterName());
+                if (v instanceof IrConstantVal) { //注意参数是constant的情况
+                    s.append(((IrConstantVal) v).getVal());
+                } else {
+                    s.append(v.getRegisterName());
+                }
                 if (i + 1 != paraNum) {
                     s.append(", ");
                 }

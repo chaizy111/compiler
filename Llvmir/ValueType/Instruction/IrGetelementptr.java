@@ -1,5 +1,6 @@
 package Llvmir.ValueType.Instruction;
 
+import Llvmir.Type.IrArrayTy;
 import Llvmir.Type.IrPointerTy;
 import Llvmir.Type.IrType;
 
@@ -7,23 +8,19 @@ import java.util.ArrayList;
 
 public class IrGetelementptr extends IrInstruction{
     private IrType outputType; // output时专门使用的type
-    private int exc; //数组的偏移量，默认为0
+    private String exc; //数组的偏移量，默认为0
 
     public IrGetelementptr() {
         super();
-        exc = 0;
+        exc = "0";
     }
 
-    public void setExc(int exc) {
+    public void setExc(String exc) {
         this.exc = exc;
     }
 
     public void setOutputType(IrType outputType) {
         this.outputType = outputType;
-    }
-
-    public int getExc() {
-        return exc;
     }
 
     //%2 = getelementptr inbounds [3 x i32], [3 x i32]* %1, i32 0, i32 0
@@ -41,7 +38,8 @@ public class IrGetelementptr extends IrInstruction{
         s.append(t.output().get(0));
         s.append(" ");
         s.append(this.getOperand(0).getRegisterName());
-        s.append(", i32 0, i32 ");
+        if (outputType instanceof IrArrayTy) s.append(", i32 0"); //函数中的没有第一个i32 0
+        s.append(", i32 ");
         s.append(exc);
         s.append("\n");
         res.add(s.toString());
