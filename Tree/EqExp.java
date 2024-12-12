@@ -31,4 +31,8 @@ public class EqExp extends Node {
     public ArrayList<RelExp> getRelExpArrayList() {
         return relExpArrayList;
     }
+
+    public ArrayList<Token> getSymbolList() {
+        return symbolList;
+    }
 }

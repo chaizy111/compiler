@@ -31,4 +31,8 @@ public class RelExp extends Node {
     public ArrayList<AddExp> getAddExpArrayList() {
         return addExpArrayList;
     }
+
+    public ArrayList<Token> getSymbolList() {
+        return symbolList;
+    }
 }

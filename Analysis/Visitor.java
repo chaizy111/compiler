@@ -6,12 +6,14 @@ import Llvmir.Type.*;
 import Llvmir.ValueType.Constant.IrConstant;
 import Llvmir.ValueType.Constant.IrConstantArray;
 import Llvmir.ValueType.Constant.IrConstantVal;
+import Llvmir.ValueType.Function.CntUtils;
 import Llvmir.ValueType.Function.IrArgument;
 import Llvmir.ValueType.Function.IrFunction;
 import Llvmir.ValueType.Global.IrGlobalConstString;
 import Llvmir.ValueType.Instruction.*;
 import Llvmir.ValueType.IrBasicBlock;
 import Llvmir.ValueType.Global.IrGlobalVariable;
+import Llvmir.ValueType.Instruction.IrLabel;
 import Symbol.Symbol;
 import Symbol.SymbolTable;
 import Symbol.Value.ArrayValue;
@@ -40,6 +42,8 @@ public class Visitor {
     private int maxTableId;
     private IrModule irModule;
     private IrFunction nowIrFunction;
+    private CntUtils cntUtils;
+    //先在visitor全局实现一个label分配器，用以给label命名，label命名采用 %label.n的形式
 
     public Visitor(CompUnit compUnit, FileWriter outputfile, ErrorDealer errorDealer) {
         this.compUnit = compUnit;
@@ -50,6 +54,7 @@ public class Visitor {
         this.maxTableId = 0;
         this.irModule = new IrModule();
         this.nowIrFunction = new IrFunction();
+        this.cntUtils = new CntUtils();
     }
 
     //TODO：在各个visit中完善ir各个部分的构建，最后统一输出。visit需要返回分析得到的ir成分，最后统一输出（中间代码生成的主要逻辑）
@@ -946,6 +951,7 @@ public class Visitor {
                 int errorLine = stmt.getbOrC().getLine();
                 errorDealer.errorM(errorLine);
             }
+
         } else if (stmt.getB() != null) {
             return visitBlock(stmt.getB(), isInForBlock, funcType);
         } else if (stmt.getE() != null) {
@@ -1244,7 +1250,7 @@ public class Visitor {
         return visitAddExp(exp.getAddExp(), isLvalue);
     }
 
-    private void visitCond(Cond cond) { //TODO:本次作业不涉及，先不做
+    private void visitCond(Cond cond, IrLabel ifLabel, IrLabel endLabel) { //TODO:本次作业不涉及，先不做
         if (cond == null) return;
         visitLOrExp(cond.getlOrExp());
     }
@@ -1401,7 +1407,7 @@ public class Visitor {
     }
 
     private IrValue visitCharacter(Character character) { //构建IrValue并返回
-        IrConstantVal res = new IrConstantVal(character.getToken().getString().charAt(1)); //TODO
+        IrConstantVal res = new IrConstantVal(character.getToken().getString().charAt(1));
         res.setType(new IrCharTy());//type为字符型
         return res;
     }
@@ -1651,29 +1657,227 @@ public class Visitor {
         return visitAddExp(constExp.getAddExp(), false); // 根据文法肯定不是左值
     }
 
-    //TODO： 下边所有的visit方法均与位运算相关，本次作业不涉及，大致实现应该与visitAddExp类似
-    private void visitRelExp(RelExp relExp) {
-        for (AddExp a: relExp.getAddExpArrayList()) {
-            visitAddExp(a, false);
+    private IrValue visitRelExp(RelExp relExp) {
+        IrValue res = new IrValue();
+        if (relExp == null) {
+            return res;
         }
+        IrValue v1 = new IrValue(), v2;
+        for (int i = 0; i < relExp.getAddExpArrayList().size(); i++) {
+            AddExp a = relExp.getAddExpArrayList().get(i);
+            if (i == 0) {
+                v1 = visitAddExp(a, false);
+                if (relExp.getAddExpArrayList().size() == 1) return v1;
+                res.addAllTempInstruction(v1.getTempInstructions());
+                if (v1.getType().getClass() == IrCharTy.class && !(v1 instanceof IrConstant)) { //所有char类型一律转成int类型
+                    IrZext z = new IrZext();
+                    z.setOperand(v1, 0);
+                    z.setRegisterName("%" + nowIrFunction.getNowRank());
+                    z.setType(new IrIntegerTy());
+                    res.addTempInstruction(z);
+                    v1 = z;
+                }
+                res.setType(v1.getType());
+            } else {
+                v2 = visitAddExp(a, false);
+                res.addAllTempInstruction(v2.getTempInstructions());
+                if (v2.getType().getClass() == IrCharTy.class && !(v2 instanceof IrConstant)) { //所有char类型一律转成int类型
+                    IrZext z = new IrZext();
+                    z.setOperand(v2, 0);
+                    z.setRegisterName("%" + nowIrFunction.getNowRank());
+                    z.setType(new IrIntegerTy());
+                    res.addTempInstruction(z);
+                    v2 = z;
+                }
+                if (v1.getType().getClass() == IrBooleanTy.class && !(v1 instanceof IrConstant)) { //如果v1经过计算是i1型的，需要转成int进行计算
+                    IrZext z = new IrZext();
+                    z.setOperand(v1, 0);
+                    z.setRegisterName("%" + nowIrFunction.getNowRank());
+                    z.setType(new IrIntegerTy());
+                    res.addTempInstruction(z);
+                    v1 = new IrValue(z); //不确定这里用不用深拷贝，这里先用深拷贝
+                }
+                if ((v1 instanceof IrConstant) && (v2 instanceof IrConstant)) { //如果都是constant型，直接计算
+                    TokenType.tokenType t = relExp.getSymbolList().get(i - 1).getType();
+                    if (t == TokenType.tokenType.LSS) {
+                        v1 = new IrConstantVal(((IrConstantVal) v1).getVal() < ((IrConstantVal) v2).getVal() ? 1 : 0);
+                    } else if (t == TokenType.tokenType.LEQ) {
+                        v1 = new IrConstantVal(((IrConstantVal) v1).getVal() <= ((IrConstantVal) v2).getVal() ? 1 : 0);
+                    } else if (t == TokenType.tokenType.GRE) {
+                        v1 = new IrConstantVal(((IrConstantVal) v1).getVal() > ((IrConstantVal) v2).getVal() ? 1 : 0);
+                    } else if (t == TokenType.tokenType.GEQ) {
+                        v1 = new IrConstantVal(((IrConstantVal) v1).getVal() >= ((IrConstantVal) v2).getVal() ? 1 : 0);
+                    }
+                    v1.setType(new IrBooleanTy());
+                    res = v1;
+                } else {
+                    //根据对应符号实现比较语句的生成并添加到res的tempInstructions中
+                    IrIcmp icmp = null;
+                    TokenType.tokenType t = relExp.getSymbolList().get(i - 1).getType();
+                    if (t == TokenType.tokenType.LSS) {
+                        icmp = new IrIcmp("slt", nowIrFunction.getNowRank(), new IrBooleanTy());
+                    } else if (t == TokenType.tokenType.LEQ) {
+                        icmp = new IrIcmp("sle", nowIrFunction.getNowRank(), new IrBooleanTy());
+                    } else if (t == TokenType.tokenType.GRE) {
+                        icmp = new IrIcmp("sgt", nowIrFunction.getNowRank(), new IrBooleanTy());
+                    } else if (t == TokenType.tokenType.GEQ) {
+                        icmp = new IrIcmp("sge", nowIrFunction.getNowRank(), new IrBooleanTy());
+                    }
+                    icmp.setOperand(v1, 0);
+                    icmp.setOperand(v2, 1);
+                    res.setRegisterName(icmp.getRegisterName());//一定要更新返回IrValue的寄存器名
+                    res.addTempInstruction(icmp);
+                    v1 = new IrValue(res); //这里一定要用深拷贝
+                }
+            }
+        }
+        return res;
     }
 
-    private void visitEqExp(EqExp eqExp) {
-        for (RelExp r: eqExp.getRelExpArrayList()) {
-            visitRelExp(r);
+    private IrValue visitEqExp(EqExp eqExp) {
+        IrValue res = new IrValue();
+        if (eqExp == null) {
+            return res;
         }
+        IrValue v1 = new IrValue(), v2;
+        for (int i = 0; i < eqExp.getRelExpArrayList().size(); i++) {
+            RelExp r = eqExp.getRelExpArrayList().get(i);
+            if (i == 0) {
+                v1 = visitRelExp(r);
+                if (eqExp.getRelExpArrayList().size() == 1) return v1;
+                res.addAllTempInstruction(v1.getTempInstructions());
+                if (v1.getType().getClass() == IrCharTy.class && !(v1 instanceof IrConstant)) { //所有char类型一律转成int类型
+                    IrZext z = new IrZext();
+                    z.setOperand(v1, 0);
+                    z.setRegisterName("%" + nowIrFunction.getNowRank());
+                    z.setType(new IrIntegerTy());
+                    res.addTempInstruction(z);
+                    v1 = z;
+                }
+                res.setType(v1.getType());
+            } else {
+                v2 = visitRelExp(r);
+                res.addAllTempInstruction(v2.getTempInstructions());
+                if (v2.getType().getClass() == IrCharTy.class && !(v2 instanceof IrConstant)) { //所有char类型一律转成int类型
+                    IrZext z = new IrZext();
+                    z.setOperand(v2, 0);
+                    z.setRegisterName("%" + nowIrFunction.getNowRank());
+                    z.setType(new IrIntegerTy());
+                    res.addTempInstruction(z);
+                    v2 = z;
+                }
+                if (v1.getType().getClass() == IrBooleanTy.class && !(v1 instanceof IrConstant)) { //如果v1经过计算是i1型的，需要转成int进行计算
+                    IrZext z = new IrZext();
+                    z.setOperand(v1, 0);
+                    z.setRegisterName("%" + nowIrFunction.getNowRank());
+                    z.setType(new IrIntegerTy());
+                    res.addTempInstruction(z);
+                    v1 = new IrValue(z); //不确定这里用不用深拷贝，这里先用深拷贝
+                }
+                if ((v1 instanceof IrConstant) && (v2 instanceof IrConstant)) { //如果都是constant型，直接计算
+                    TokenType.tokenType t = eqExp.getSymbolList().get(i - 1).getType();
+                    if (t == TokenType.tokenType.EQL) {
+                        v1 = new IrConstantVal(((IrConstantVal) v1).getVal() == ((IrConstantVal) v2).getVal() ? 1 : 0);
+                    } else if (t == TokenType.tokenType.NEQ) {
+                        v1 = new IrConstantVal(((IrConstantVal) v1).getVal() != ((IrConstantVal) v2).getVal() ? 1 : 0);
+                    }
+                    v1.setType(new IrBooleanTy());
+                    res = v1;
+                } else {
+                    IrIcmp icmp = null;
+                    TokenType.tokenType t = eqExp.getSymbolList().get(i - 1).getType();
+                    if (t == TokenType.tokenType.EQL) {
+                        icmp = new IrIcmp("eq", nowIrFunction.getNowRank(), new IrBooleanTy());
+                    } else if (t == TokenType.tokenType.NEQ) {
+                        icmp = new IrIcmp("ne", nowIrFunction.getNowRank(), new IrBooleanTy());
+                    }
+                    icmp.setOperand(v1, 0);
+                    icmp.setOperand(v2, 1);
+                    res.setRegisterName(icmp.getRegisterName());//一定要更新返回IrValue的寄存器名
+                    res.addTempInstruction(icmp);
+                    v1 = new IrValue(res); //这里一定要用深拷贝
+                }
+            }
+        }
+        return res;
     }
 
-    private void visitLAndExp(LAndExp lAndExp) {
-        for (EqExp e: lAndExp.getEqExpArrayList()) {
-            visitEqExp(e);
+    private IrLabel visitLAndExp(LAndExp lAndExp, IrLabel ifLabel, IrLabel nextLabel) { //返回IrLabel，意为下一个LAndExp基本块的起始块号
+        //观察文法，在这里就要生成Br语句了，如果判断不成立，就要跳到nextLabel处，nextLabel作为参数传进方法，如果全部EqExp判断成立，就跳到IfLabel处
+        //注意短路求值的实现
+        //为右边提前创好基本块
+        IrLabel res = new IrLabel();
+        if (lAndExp == null) {
+            return res;
         }
+        IrValue v1;
+        int next = cntUtils.getCount(); //第一个next提前准备好
+        for (int i = 0; i < lAndExp.getEqExpArrayList().size(); i++) {
+            EqExp e = lAndExp.getEqExpArrayList().get(i);
+            v1 = visitEqExp(e);
+            //两种情况，没有&&符号和有&&符号
+            if (lAndExp.getEqExpArrayList().size() == 1) {
+                //没有符号，等价于判断e返回的寄存器中存储的值是否为0，并返回
+                res = new IrLabel(next);
+                res.addAllTempInstruction(v1.getTempInstructions());
+                if (v1 instanceof IrConstant) { //如果是常数，看是否为0，不为0，就跳到传进来的IfLabel中；如果为0，就跳到nextLabel处
+                    IrGotoBr g;
+                    if (((IrConstantVal) v1).getVal() == 0) {
+                        g = new IrGotoBr(nextLabel);
+                    } else {
+                        g = new IrGotoBr(ifLabel);
+                    }
+                    res.addTempInstruction(g);
+                } else { //否则取出v1寄存器并与0 构造icmp语句,返回一个新的IrLabel
+                    IrIcmp cmp = new IrIcmp("ne", nowIrFunction.getNowRank(), new IrBooleanTy());
+                    cmp.setOperand(v1, 0);
+                    cmp.setOperand(new IrConstantVal(0), 1);
+                    IrBr b = new IrBr(ifLabel, nextLabel);
+                    b.setOperand(cmp, 0);
+                    res.addTempInstruction(cmp);
+                    res.addTempInstruction(b);
+                }
+                return res;
+            } else { //有多个eqExp,除第一个eqExp，每个eqExp都放到一个新的Label中,每次都取eqExp构建icmp
+                // TODO：按理说这里的Label部分就算一个新的basicBlock了，这一点在后边优化的时候有用，这里先不考虑
+                IrLabel l = new IrLabel(next);
+                next = cntUtils.getCount(); //更新next
+                res.addTempInstruction(l);
+                res.addAllTempInstruction(v1.getTempInstructions());
+
+                IrIcmp cmp = new IrIcmp("eq", nowIrFunction.getNowRank(), new IrBooleanTy()); //注意和前边的区别
+                cmp.setOperand(v1, 0);
+                cmp.setOperand(new IrConstantVal(0), 1);
+                IrBr b = new IrBr(nextLabel, l); //为0则整体不成立，跳到整体外下一个Label中，否则跳入当前lAndExp中的下一个Label中
+                b.setOperand(cmp, 0);
+                res.addTempInstruction(cmp);
+                res.addTempInstruction(b);
+
+                res.setRegisterName(String.valueOf(next));
+            }
+        }
+        return res;
     }
 
-    private void visitLOrExp(LOrExp lOrExp) {
-        for (LAndExp l: lOrExp.getlAndExpArrayList()) {
-            visitLAndExp(l);
+    private IrValue visitLOrExp(LOrExp lOrExp, IrLabel ifLabel, IrLabel endLabel) {
+        //传两个Label，一个是有一个成立就要跳到的if的blcok的Label，另一个是全都不成立跳到If外的Label
+        IrValue res = new IrValue();
+        if (lOrExp == null) {
+            return res;
         }
+        res.addTempInstruction(new IrLabel(cntUtils.getCount())); //先把最开始的Label输出
+        IrLabel finishLabel = lOrExp.getlAndExpArrayList().size() == 1 ? endLabel : new IrLabel(cntUtils.getCount());
+        for (int i = 0; i < lOrExp.getlAndExpArrayList().size(); i++) {
+            LAndExp la = lOrExp.getlAndExpArrayList().get(i);
+            IrLabel l = visitLAndExp(la, ifLabel, finishLabel);
+            res.addAllTempInstruction(l.getTempInstructions());
+            finishLabel = l;
+            res.addTempInstruction(finishLabel);
+        }
+        //最后一个Label放一条跳endLabel的语句
+        IrGotoBr g = new IrGotoBr(endLabel);
+        res.addTempInstruction(g);
+        return res;
     }
 
     public void printSymbolTables() throws IOException {
