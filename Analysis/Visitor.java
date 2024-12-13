@@ -1085,7 +1085,7 @@ public class Visitor {
         }
         //配置返回IrValue，配置ret指令并添加
         IrValue res = new IrValue(); //注意返回时可能的类型转换
-        //TODO：ret是基本块,这是建立ret基本快的几步
+        //ret是基本块,这是建立ret基本快的几步
         IrLabel label = new IrLabel(cntUtils.getCount());
         IrGotoBr g = new IrGotoBr(label);
         res.addTempInstruction(g);
@@ -1559,7 +1559,7 @@ public class Visitor {
         if (unaryExp.getPrimaryExp() != null) {
             return visitPrimaryExp(unaryExp.getPrimaryExp(), isLvalue);
         } else if (unaryExp.getUnaryExp() != null) {
-            //分析unaryOp的种类来决定下一步的操作，如果是+，如果是-生成一个与0相减的语句//TODO:如果是!,则需要比较其与0的大小
+            //分析unaryOp的种类来决定下一步的操作，如果是+，如果是-生成一个与0相减的语句, 如果是!,则需要比较其与0的大小
             int judge = visitUnaryOp(unaryExp.getUnaryOp());
             IrValue v = visitUnaryExp(unaryExp.getUnaryExp(), isLvalue);
             if (judge == 1) { //生成一条sub语句并实现value的更新,注意这里没有保存计算结果，可能会出现bug
@@ -1584,6 +1584,20 @@ public class Visitor {
                     i.setOperand(new IrValue(v), 1);
                     v.setRegisterName(i.getRegisterName()); //一定要更新返回IrValue的寄存器名
                     v.addTempInstruction(i);
+                }
+            } else if (judge == 2) { //判断逻辑：如果是常量，直接看其是否为0，构造后返回，如果不是常量，实现一个icmp语句并返回
+                if (v instanceof IrConstant) { //如果是常量，直接计算
+                    IrConstantVal res = new IrConstantVal(((IrConstantVal) v).getVal() == 0 ? 1: 0);
+                    res.setType(new IrBooleanTy());
+                    res.addAllTempInstruction(v.getTempInstructions());
+                    return res;
+                } else {
+                    IrIcmp cmp = new IrIcmp("eq", nowIrFunction.getNowRank(), new IrBooleanTy());
+                    cmp.setOperand(v, 0);
+                    cmp.setOperand(new IrConstantVal(0), 1);
+                    cmp.addAllTempInstruction(v.getTempInstructions());
+                    cmp.addTempInstruction(cmp);
+                    return cmp;
                 }
             }
             return v;
@@ -1644,6 +1658,8 @@ public class Visitor {
     private int visitUnaryOp(UnaryOp unaryOp) {
         if (unaryOp.getToken().getString().equals("-")) {
             return 1;
+        } else if (unaryOp.getToken().getString().equals("!")) {
+            return 2;
         } else {
             return 0;
         }
