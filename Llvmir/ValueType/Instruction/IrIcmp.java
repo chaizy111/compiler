@@ -33,7 +33,7 @@ public class IrIcmp extends IrInstruction{
         } else {
             right = r.getRegisterName();
         }
-        s = this.getRegisterName() + " = " + kind + " " + this.getType().output().get(0) + " " + left + ", " + right + "\n";
+        s = this.getRegisterName() + " = icmp " + kind + " " + l.getType().output().get(0) + " " + left + ", " + right + "\n";
         res.add(s);
         return res;
     }

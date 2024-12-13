@@ -17,7 +17,7 @@ public class IrLabel extends IrInstruction implements IrNode {
     @Override
     public ArrayList<String> output() {
         ArrayList<String> res = new ArrayList<>();
-        String s = "%Label." + this.getRegisterName() + ":\n";
+        String s = "Label." + this.getRegisterName() + ":\n";
         res.add(s);
         return res;
     }

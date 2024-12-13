@@ -1,6 +1,7 @@
 package Llvmir.ValueType.Instruction;
 
 import Llvmir.IrValue;
+import Llvmir.Type.IrType;
 import Llvmir.ValueType.Constant.IrConstantVal;
 
 import java.util.ArrayList;
@@ -24,35 +25,38 @@ public class IrBinaryOp extends IrInstruction{
         String s;
         String left;
         String right;
+        IrType t = null;
         if (l instanceof IrConstantVal) {
             left = String.valueOf(((IrConstantVal) l).getVal());
         } else {
             left = l.getRegisterName();
+            t = l.getType();
         }
         if (r instanceof IrConstantVal) {
             right = String.valueOf(((IrConstantVal) r).getVal());
         } else {
             right = r.getRegisterName();
+            t = r.getType();
         }
+
         switch (operationTy) {
             case Add:
-                s = this.getRegisterName() + " = add nsw " + l.getType().output().get(0) + " " + left + ", " + right + "\n";
+                s = this.getRegisterName() + " = add nsw " + t.output().get(0) + " " + left + ", " + right + "\n";
                 break;
             case Sub:
-                s = this.getRegisterName() + " = sub nsw " + l.getType().output().get(0) + " " + left + ", " + right + "\n";
+                s = this.getRegisterName() + " = sub nsw " + t.output().get(0) + " " + left + ", " + right + "\n";
                 break;
             case Mul:
-                s = this.getRegisterName() + " = mul nsw " + l.getType().output().get(0) + " " + left + ", " + right + "\n";
+                s = this.getRegisterName() + " = mul nsw " + t.output().get(0) + " " + left + ", " + right + "\n";
                 break;
             case Div:
-                s = this.getRegisterName() + " = sdiv " + l.getType().output().get(0) + " " + left + ", " + right + "\n";
+                s = this.getRegisterName() + " = sdiv " + t.output().get(0) + " " + left + ", " + right + "\n";
                 break;
             case Mod:
-                s = this.getRegisterName() + " = srem " + l.getType().output().get(0) + " " + left + ", " + right + "\n";
+                s = this.getRegisterName() + " = srem " + t.output().get(0) + " " + left + ", " + right + "\n";
                 break;
             default:
                 s = "wrong";
-                //TODO:剩下的是关于逻辑运算的指令，这次作业不涉及
         }
         res.add(s);
         return res;
