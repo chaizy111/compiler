@@ -1085,6 +1085,12 @@ public class Visitor {
         }
         //配置返回IrValue，配置ret指令并添加
         IrValue res = new IrValue(); //注意返回时可能的类型转换
+        //TODO：ret是基本块,这是建立ret基本快的几步
+        IrLabel label = new IrLabel(cntUtils.getCount());
+        IrGotoBr g = new IrGotoBr(label);
+        res.addTempInstruction(g);
+        res.addTempInstruction(label);
+
         IrRet ret = new IrRet();
         if (returnStmt.getExp() != null) {
             IrValue v = visitExp(returnStmt.getExp(), false);
@@ -1121,6 +1127,11 @@ public class Visitor {
             ret.setType(new IrVoidTy());
         }
         res.addTempInstruction(ret);
+
+        //ret块后的第一个块
+        IrLabel label1 = new IrLabel(cntUtils.getCount());
+        res.addTempInstruction(label1);
+
         return res;
     }
 
@@ -1548,7 +1559,7 @@ public class Visitor {
         if (unaryExp.getPrimaryExp() != null) {
             return visitPrimaryExp(unaryExp.getPrimaryExp(), isLvalue);
         } else if (unaryExp.getUnaryExp() != null) {
-            //分析unaryOp的种类来决定下一步的操作，如果是+或者!则不生成语句，如果是-生成一个与0相减的语句
+            //分析unaryOp的种类来决定下一步的操作，如果是+，如果是-生成一个与0相减的语句//TODO:如果是!,则需要比较其与0的大小
             int judge = visitUnaryOp(unaryExp.getUnaryOp());
             IrValue v = visitUnaryExp(unaryExp.getUnaryExp(), isLvalue);
             if (judge == 1) { //生成一条sub语句并实现value的更新,注意这里没有保存计算结果，可能会出现bug
