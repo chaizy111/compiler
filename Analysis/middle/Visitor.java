@@ -209,7 +209,7 @@ public class Visitor {
         if(constDef.getConstExp() == null) s.setType(0);
         else {
             IrValue v = visitConstExp(constDef.getConstExp());
-            if (v instanceof IrConstant) {
+            if (v instanceof IrConstantVal) {
                 s.setArraySize(((IrConstantVal) v).getVal());
             } else {
                 s.setArraySize(constDef.getConstExp().getResult());
@@ -290,7 +290,7 @@ public class Visitor {
         if(constDef.getConstExp() == null) s.setType(0);
         else {
             IrValue v = visitConstExp(constDef.getConstExp());
-            if (v instanceof IrConstant) {
+            if (v instanceof IrConstantVal) {
                 s.setArraySize(((IrConstantVal) v).getVal());
             } else {
                 s.setArraySize(constDef.getConstExp().getResult());
@@ -394,7 +394,7 @@ public class Visitor {
         if (constInitVal.getConstExp() != null) { //只有1个exp
             IrValue v = visitConstExp(constInitVal.getConstExp());
             VarValue value = new VarValue();
-            if (v instanceof IrConstant) {
+            if (v instanceof IrConstantVal) {
                 value.setItem(((IrConstantVal) v).getVal());
             } else {
                 value.setItem(constInitVal.getConstExp().getResult());
@@ -404,7 +404,7 @@ public class Visitor {
             ArrayValue value = new ArrayValue();
             for (ConstExp c: constInitVal.getConstExpArrayList()) {
                 IrValue v = visitConstExp(c);
-                if (v instanceof IrConstant) {
+                if (v instanceof IrConstantVal) {
                     value.addItem(((IrConstantVal) v).getVal());
                 } else {
                     value.addItem(c.getResult());
@@ -471,7 +471,7 @@ public class Visitor {
         if(valDef.getConstExp() == null) s.setType(0);
         else { //将中括号中的信息进行分析并传入符号表
             IrValue v = visitConstExp(valDef.getConstExp());
-            if (v instanceof IrConstant) {
+            if (v instanceof IrConstantVal) {
                 s.setArraySize(((IrConstantVal) v).getVal());
             } else {
                 s.setArraySize(valDef.getConstExp().getResult());
@@ -551,7 +551,7 @@ public class Visitor {
         else {
             IrValue v = visitConstExp(valDef.getConstExp());
             instructions.addAll(v.getTempInstructions());
-            if (v instanceof IrConstant) {
+            if (v instanceof IrConstantVal) {
                 s.setArraySize(((IrConstantVal) v).getVal());
             } else {
                 s.setArraySize(valDef.getConstExp().getResult());
@@ -628,14 +628,14 @@ public class Visitor {
                 if (((IrPointerTy) v1.getType()).getType().getClass() != v2.getType().getClass()) {
                     if (v2.getType().getClass() == IrIntegerTy.class && !(v2 instanceof IrConstant)) { //int转char，用trunc
                         IrTrunc trunc = new IrTrunc();
-                        trunc.setOperand(v2, 0);
+                        trunc.setOperand(new IrValue(v2), 0);
                         trunc.setRegisterName("%" + nowIrFunction.getNowRank());
                         trunc.setType(new IrCharTy());
                         instructions.add(trunc);
                         v2= trunc;
                     } else if (v2.getType().getClass() == IrCharTy.class && !(v2 instanceof IrConstant)) { //char转int，用zext
                         IrZext z = new IrZext();
-                        z.setOperand(v2, 0);
+                        z.setOperand(new IrValue(v2), 0);
                         z.setRegisterName("%" + nowIrFunction.getNowRank());
                         z.setType(new IrIntegerTy());
                         instructions.add(z);
@@ -665,7 +665,7 @@ public class Visitor {
         if (initVal.getExp() != null) { //只有1个exp
             IrValue v = visitExp(initVal.getExp(), false);
             VarValue value = new VarValue();
-            if (v instanceof IrConstant) {
+            if (v instanceof IrConstantVal) {
                 value.setItem(((IrConstantVal) v).getVal());
             } else {
                 value.setItem(initVal.getExp().getAddExp().getResult());
@@ -675,7 +675,7 @@ public class Visitor {
             ArrayValue value = new ArrayValue();
             for (Exp c: initVal.getExpArrayList()) {
                 IrValue v = visitExp(c, false);
-                if (v instanceof IrConstant) {
+                if (v instanceof IrConstantVal) {
                     value.addItem(((IrConstantVal) v).getVal());
                 } else {
                     value.addItem(c.getAddExp().getResult());
@@ -890,6 +890,10 @@ public class Visitor {
                         errorDealer.errorF(errorLine);
                     }
                 }
+                IrLabel label = new IrLabel(cntUtils.getCount());
+                IrGotoBr g = new IrGotoBr(label);
+                basicBlock.addTempInstruction(g);
+                basicBlock.addTempInstruction(label);
 
                 IrRet ret = new IrRet(); // 添加返回指令 //注意返回时可能的类型转换
                 IrValue v = visitExp(returnStmt.getExp(), false);//根据文法，这里肯定不是左值
@@ -901,7 +905,7 @@ public class Visitor {
                 } else {
                     ret.setType(new IrVoidTy());
                 }
-                if (v instanceof IrConstant) {
+                if (v instanceof IrConstantVal) {
                     //如果exp是Number或Character,那一层层向上传，最后到达这里的一定是一个IrConstant型的，
                     // 所以如果分析的结果是IrConstant型，我们可以认为ret了一个常量
                     ret.setResult(((IrConstantVal) v).getVal());
@@ -911,14 +915,14 @@ public class Visitor {
                     ret.setRegisterName(v.getRegisterName());
                     if (v.getType() instanceof IrCharTy && ret.getType() instanceof IrIntegerTy) {
                         IrZext z = new IrZext();
-                        z.setOperand(v, 0);
+                        z.setOperand(new IrValue(v), 0);
                         z.setRegisterName("%" + nowIrFunction.getNowRank());
                         z.setType(new IrIntegerTy());
                         basicBlock.addInstruction(z);
                         ret.setRegisterName(z.getRegisterName());
                     } else if (v.getType() instanceof IrIntegerTy && ret.getType() instanceof IrCharTy) {
                         IrTrunc t = new IrTrunc();
-                        t.setOperand(v, 0);
+                        t.setOperand(new IrValue(v), 0);
                         t.setRegisterName("%" + nowIrFunction.getNowRank());
                         t.setType(new IrCharTy());
                         basicBlock.addInstruction(t);
@@ -926,6 +930,10 @@ public class Visitor {
                     }
                 }
                 basicBlock.addInstruction(ret);
+
+                //ret块后的第一个块
+                IrLabel label1 = new IrLabel(cntUtils.getCount());
+                basicBlock.addTempInstruction(label1);
 
             } else if (b instanceof Decl) {
                 basicBlock.addAllInstruction(visitDeclInFunc((Decl) b));
@@ -939,9 +947,18 @@ public class Visitor {
             errorDealer.errorG(errorLine);
         }
         if (funcType == 2 && returnStmt == null) { //是void型函数且没有返回语句
+            IrLabel label = new IrLabel(cntUtils.getCount());
+            IrGotoBr g = new IrGotoBr(label);
+            basicBlock.addTempInstruction(g);
+            basicBlock.addTempInstruction(label);
+
             IrRet ret = new IrRet();
             ret.setType(new IrVoidTy());
             basicBlock.addInstruction(ret);
+
+            //ret块后的第一个块
+            IrLabel label1 = new IrLabel(cntUtils.getCount());
+            basicBlock.addTempInstruction(label1);
         }
         return basicBlock;
     }
@@ -951,10 +968,10 @@ public class Visitor {
             return null;
         }
         if (blockItem instanceof Decl) {
-            IrValue v = new IrValue();
+            IrValue value = new IrValue();
             ArrayList<IrInstruction> instructions = visitDeclInFunc((Decl) blockItem);
-            v.addAllTempInstruction(instructions);
-            return v;
+            value.addAllTempInstruction(instructions);
+            return value;
         } else {
             return visitStmt((Stmt) blockItem, isInForBlock, funcType, endLabel, continueLabel);
         }
@@ -1127,7 +1144,12 @@ public class Visitor {
         if (returnStmt.getExp() != null) {
             IrValue v = visitExp(returnStmt.getExp(), false);
             res.addAllTempInstruction(v.getTempInstructions());
-            if (v instanceof IrConstant) {
+            if (funcType == 0) { //配置ret的返回类型，与函数保持一致
+                ret.setType(new IrIntegerTy());
+            } else if (funcType == 1) {
+                ret.setType(new IrCharTy());
+            }
+            if (v instanceof IrConstantVal) {
                 //如果exp是Number或Character,那一层层向上传，最后到达这里的一定是一个IrConstant型的，
                 // 所以如果分析的结果是IrConstant型，我们可以认为ret了一个常量
                 ret.setResult(((IrConstantVal) v).getVal());
@@ -1136,24 +1158,19 @@ public class Visitor {
                 ret.setRegisterName(v.getRegisterName());
                 if (v.getType() instanceof IrCharTy && ret.getType() instanceof IrIntegerTy) {
                     IrZext z = new IrZext();
-                    z.setOperand(v, 0);
+                    z.setOperand(new IrValue(v), 0);
                     z.setRegisterName("%" + nowIrFunction.getNowRank());
                     z.setType(new IrIntegerTy());
                     res.addTempInstruction(z);
                     ret.setRegisterName(z.getRegisterName());
                 } else if (v.getType() instanceof IrIntegerTy && ret.getType() instanceof IrCharTy) {
                     IrTrunc t = new IrTrunc();
-                    t.setOperand(v, 0);
+                    t.setOperand(new IrValue(v), 0);
                     t.setRegisterName("%" + nowIrFunction.getNowRank());
                     t.setType(new IrCharTy());
                     res.addTempInstruction(t);
                     ret.setRegisterName(t.getRegisterName());
                 }
-            }
-            if (funcType == 0) { //配置ret的返回类型，与函数保持一致
-                ret.setType(new IrIntegerTy());
-            } else if (funcType == 1) {
-                ret.setType(new IrCharTy());
             }
         } else {
             ret.setType(new IrVoidTy());
@@ -1251,11 +1268,11 @@ public class Visitor {
                 IrCall call2 = new IrCall(); //配置putint putch的call，其名字需要根据kind[i]判断，参数数为1，参数从exp[k]获取
                 IrValue v = exps.get(k);
                 if (exps.get(k).getType() instanceof IrCharTy) { //char类型赋给%d%c,要用zext做类型转换，并更改exp的类型
-                    if (v instanceof IrConstant) { //如果是常量，不用类型转换，直接改其type即可
+                    if (v instanceof IrConstantVal) { //如果是常量，不用类型转换，直接改其type即可
                         v.setType(new IrIntegerTy());
                     } else {
                         IrZext z = new IrZext();
-                        z.setOperand(exps.get(k), 0);
+                        z.setOperand(new IrValue(exps.get(k)), 0);
                         z.setRegisterName("%" + nowIrFunction.getNowRank());
                         z.setType(new IrIntegerTy());
                         res.addTempInstruction(z);
@@ -1301,7 +1318,7 @@ public class Visitor {
             if (((IrPointerTy) v1.getType()).getType().getClass() == IrCharTy.class) {
                 //如果v1Pointer类型内部存储的type与call得到的不一致， 则需要类型转换，生成一个新的IrValue传给store
                 IrTrunc trunc = new IrTrunc();
-                trunc.setOperand(call, 0);
+                trunc.setOperand(new IrValue(call), 0);
                 trunc.setRegisterName("%" + nowIrFunction.getNowRank());
                 trunc.setType(new IrCharTy());
                 res.addTempInstruction(trunc);
@@ -1325,7 +1342,7 @@ public class Visitor {
             if (((IrPointerTy) v1.getType()).getType().getClass() == IrCharTy.class) {
                 //如果v1Pointer类型内部存储的type与call得到的不一致， 则需要类型转换，生成一个新的IrValue传给store
                 IrTrunc trunc = new IrTrunc();
-                trunc.setOperand(call, 0);
+                trunc.setOperand(new IrValue(call), 0);
                 trunc.setRegisterName("%" + nowIrFunction.getNowRank());
                 trunc.setType(new IrCharTy());
                 res.addTempInstruction(trunc);
@@ -1345,14 +1362,14 @@ public class Visitor {
             if (((IrPointerTy) v1.getType()).getType().getClass() != v2.getType().getClass()) {
                 if (v2.getType().getClass() == IrIntegerTy.class && !(v2 instanceof IrConstantVal)) { //int转char，用trunc
                     IrTrunc trunc = new IrTrunc();
-                    trunc.setOperand(v2, 0);
+                    trunc.setOperand(new IrValue(v2), 0);
                     trunc.setRegisterName("%" + nowIrFunction.getNowRank());
                     trunc.setType(new IrCharTy());
                     res.addTempInstruction(trunc);
                     v2= trunc;
                 } else if (v2.getType().getClass() == IrCharTy.class && !(v2 instanceof IrConstantVal)) { //char转int，用zext
                     IrZext z = new IrZext();
-                    z.setOperand(v2, 0);
+                    z.setOperand(new IrValue(v2), 0);
                     z.setRegisterName("%" + nowIrFunction.getNowRank());
                     z.setType(new IrIntegerTy());
                     res.addTempInstruction(z);
@@ -1388,14 +1405,14 @@ public class Visitor {
         if (((IrPointerTy) v1.getType()).getType().getClass() != v2.getType().getClass()) {
             if (v2.getType().getClass() == IrIntegerTy.class && !(v2 instanceof IrConstantVal)) { //int转char，用trunc
                 IrTrunc trunc = new IrTrunc();
-                trunc.setOperand(v2, 0);
+                trunc.setOperand(new IrValue(v2), 0);
                 trunc.setRegisterName("%" + nowIrFunction.getNowRank());
                 trunc.setType(new IrCharTy());
                 res.addTempInstruction(trunc);
                 v2= trunc;
             } else if (v2.getType().getClass() == IrCharTy.class && !(v2 instanceof IrConstantVal)) { //char转int，用zext
                 IrZext z = new IrZext();
-                z.setOperand(v2, 0);
+                z.setOperand(new IrValue(v2), 0);
                 z.setRegisterName("%" + nowIrFunction.getNowRank());
                 z.setType(new IrIntegerTy());
                 res.addTempInstruction(z);
@@ -1487,14 +1504,23 @@ public class Visitor {
             //先通过v1得到数组元素的位次号，从IrConstantArray类型中取出对应的IrConstntVal作为res的IrValue
             String index;
             int num = -1;
+            IrValue res = new IrValue();
+            res.addAllTempInstruction(v1.getTempInstructions());
             if (v1 instanceof IrConstantVal) {
                 index = String.valueOf(((IrConstantVal) v1).getVal());
                 num = Integer.parseInt(index);
             } else {
                 index = v1.getRegisterName();
+                if (v1.getType().getClass() != IrIntegerTy.class) {
+                    IrZext z = new IrZext();
+                    z.setOperand(new IrValue(v1), 0);
+                    z.setRegisterName("%" + nowIrFunction.getNowRank());
+                    z.setType(new IrIntegerTy());
+                    res.addTempInstruction(z);
+                    index = z.getRegisterName();
+                }
             }
 
-            IrValue res = new IrValue();
             if (num != -1 && !isLvalue) { //不是左值才能直接用
                 if (v2 instanceof IrGlobalVariable) {
                     if (v2.getConstant() != null) { //说明可以取到常量，直接用于计算
@@ -1505,8 +1531,6 @@ public class Visitor {
                     return ((IrConstantArray) v2.getConstant()).getConstantVals().get(num);
                 }
             }
-
-            res.addAllTempInstruction(v1.getTempInstructions());
 
             IrGetelementptr i = new IrGetelementptr(); //配置Getelementptr
             i.setExc(index);
@@ -1601,7 +1625,7 @@ public class Visitor {
                     //不是常量，可能需要类型转换 //todo
                     if (v.getType().getClass() != IrIntegerTy.class) { //所有非int类型一律转成int类型
                         IrZext z = new IrZext();
-                        z.setOperand(v, 0);
+                        z.setOperand(new IrValue(v), 0);
                         z.setRegisterName("%" + nowIrFunction.getNowRank());
                         z.setType(new IrIntegerTy());
                         v.addTempInstruction(z);
@@ -1671,13 +1695,36 @@ public class Visitor {
                 }
                 IrCall call = new IrCall(); //完成call指令并填到value的指令集合中
                 call.setType(((IrFunctionTy) s.getIrValue().getType()).getFuncType());
-                if (!(call.getType() instanceof IrVoidTy)) { //void型的不分配寄存器
-                    call.setRegisterName("%" + nowIrFunction.getNowRank());
-                }
                 call.setParaNum(paraList.size());
                 call.setFuncName("@" + t.getString());
+                LinkedList<IrArgument> alist = ((IrFunction) s.getIrValue()).getArguments();
                 for (int i = 0; i < paraList.size(); i++) { // 配置参数
-                    call.setOperand(paraList.get(i), i);
+                    IrValue temp = paraList.get(i);
+                    if (alist.get(i).getType().getClass() != temp.getType().getClass() && !(alist.get(i).getType() instanceof IrPointerTy || temp.getType() instanceof IrPointerTy)) {
+                        if (temp instanceof IrConstantVal) {
+                            temp.setType(temp.getType() instanceof IrIntegerTy ? new IrCharTy() : new IrIntegerTy());
+                        } else if (temp.getType() instanceof IrCharTy) {
+                            IrZext z = new IrZext();
+                            z.setOperand(temp, 0);
+                            z.setRegisterName("%" + nowIrFunction.getNowRank());
+                            z.setType(new IrIntegerTy());
+                            res.addTempInstruction(z);
+                            temp.setType(z.getType());
+                            temp.setRegisterName(z.getRegisterName());
+                        } else if (temp.getType() instanceof IrIntegerTy) {
+                            IrTrunc trunc = new IrTrunc();
+                            trunc.setOperand(temp, 0);
+                            trunc.setRegisterName("%" + nowIrFunction.getNowRank());
+                            trunc.setType(new IrCharTy());
+                            res.addTempInstruction(trunc);
+                            temp.setType(trunc.getType());
+                            temp.setRegisterName(trunc.getRegisterName());
+                        }
+                    }
+                    call.setOperand(temp, i);
+                }
+                if (!(call.getType() instanceof IrVoidTy)) { //void型的不分配寄存器
+                    call.setRegisterName("%" + nowIrFunction.getNowRank());
                 }
                 res.addTempInstruction(call);
                 res.setRegisterName(call.getRegisterName());//一定要更新返回IrValue的寄存器名
@@ -1721,7 +1768,7 @@ public class Visitor {
                 res.addAllTempInstruction(v1.getTempInstructions());
                 if (v1.getType().getClass() != IrIntegerTy.class && !(v1 instanceof IrConstantVal)) { //所有char类型一律转成int类型
                     IrZext z = new IrZext();
-                    z.setOperand(v1, 0);
+                    z.setOperand(new IrValue(v1), 0);
                     z.setRegisterName("%" + nowIrFunction.getNowRank());
                     z.setType(new IrIntegerTy());
                     res.addTempInstruction(z);
@@ -1733,7 +1780,7 @@ public class Visitor {
                 res.addAllTempInstruction(v2.getTempInstructions());
                 if (v2.getType().getClass() != IrIntegerTy.class && !(v2 instanceof IrConstantVal)) { //所有char类型一律转成int类型
                     IrZext z = new IrZext();
-                    z.setOperand(v2, 0);
+                    z.setOperand(new IrValue(v2), 0);
                     z.setRegisterName("%" + nowIrFunction.getNowRank());
                     z.setType(new IrIntegerTy());
                     res.addTempInstruction(z);
@@ -1790,7 +1837,7 @@ public class Visitor {
                 res.addAllTempInstruction(v1.getTempInstructions());
                 if (v1.getType().getClass() != IrIntegerTy.class && !(v1 instanceof IrConstantVal)) { //所有char类型一律转成int类型
                     IrZext z = new IrZext();
-                    z.setOperand(v1, 0);
+                    z.setOperand(new IrValue(v1), 0);
                     z.setRegisterName("%" + nowIrFunction.getNowRank());
                     z.setType(new IrIntegerTy());
                     res.addTempInstruction(z);
@@ -1802,7 +1849,7 @@ public class Visitor {
                 res.addAllTempInstruction(v2.getTempInstructions());
                 if (v2.getType().getClass() != IrIntegerTy.class && !(v2 instanceof IrConstantVal)) { //所有char类型一律转成int类型
                     IrZext z = new IrZext();
-                    z.setOperand(v2, 0);
+                    z.setOperand(new IrValue(v2), 0);
                     z.setRegisterName("%" + nowIrFunction.getNowRank());
                     z.setType(new IrIntegerTy());
                     res.addTempInstruction(z);
@@ -1859,7 +1906,7 @@ public class Visitor {
                 res.addAllTempInstruction(v1.getTempInstructions());
                 if (v1.getType().getClass() != IrIntegerTy.class && !(v1 instanceof IrConstantVal)) { //所有char类型一律转成int类型
                     IrZext z = new IrZext();
-                    z.setOperand(v1, 0);
+                    z.setOperand(new IrValue(v1), 0);
                     z.setRegisterName("%" + nowIrFunction.getNowRank());
                     z.setType(new IrIntegerTy());
                     res.addTempInstruction(z);
@@ -1871,7 +1918,7 @@ public class Visitor {
                 res.addAllTempInstruction(v2.getTempInstructions());
                 if (v2.getType().getClass() != IrIntegerTy.class && !(v2 instanceof IrConstantVal)) { //所有char类型一律转成int类型
                     IrZext z = new IrZext();
-                    z.setOperand(v2, 0);
+                    z.setOperand(new IrValue(v2), 0);
                     z.setRegisterName("%" + nowIrFunction.getNowRank());
                     z.setType(new IrIntegerTy());
                     res.addTempInstruction(z);
@@ -1879,7 +1926,7 @@ public class Visitor {
                 }
                 if (v1.getType().getClass() != IrIntegerTy.class && !(v1 instanceof IrConstantVal)) { //如果v1经过计算是i1型的，需要转成int进行计算
                     IrZext z = new IrZext();
-                    z.setOperand(v1, 0);
+                    z.setOperand(new IrValue(v1), 0);
                     z.setRegisterName("%" + nowIrFunction.getNowRank());
                     z.setType(new IrIntegerTy());
                     res.addTempInstruction(z);
@@ -1939,7 +1986,7 @@ public class Visitor {
                 res.addAllTempInstruction(v1.getTempInstructions());
                 if (v1.getType().getClass() != IrIntegerTy.class && !(v1 instanceof IrConstantVal)) { //所有char类型一律转成int类型
                     IrZext z = new IrZext();
-                    z.setOperand(v1, 0);
+                    z.setOperand(new IrValue(v1), 0);
                     z.setRegisterName("%" + nowIrFunction.getNowRank());
                     z.setType(new IrIntegerTy());
                     res.addTempInstruction(z);
@@ -1951,7 +1998,7 @@ public class Visitor {
                 res.addAllTempInstruction(v2.getTempInstructions());
                 if (v2.getType().getClass() != IrIntegerTy.class && !(v2 instanceof IrConstantVal)) { //所有char类型一律转成int类型
                     IrZext z = new IrZext();
-                    z.setOperand(v2, 0);
+                    z.setOperand(new IrValue(v2), 0);
                     z.setRegisterName("%" + nowIrFunction.getNowRank());
                     z.setType(new IrIntegerTy());
                     res.addTempInstruction(z);
@@ -1959,7 +2006,7 @@ public class Visitor {
                 }
                 if (v1.getType().getClass() != IrIntegerTy.class && !(v1 instanceof IrConstantVal)) { //如果v1经过计算是i1型的，需要转成int进行计算
                     IrZext z = new IrZext();
-                    z.setOperand(v1, 0);
+                    z.setOperand(new IrValue(v1), 0);
                     z.setRegisterName("%" + nowIrFunction.getNowRank());
                     z.setType(new IrIntegerTy());
                     res.addTempInstruction(z);
@@ -2013,7 +2060,7 @@ public class Visitor {
                 //没有符号，等价于判断e返回的寄存器中存储的值是否为0，并返回
                 res = new IrLabel(cntUtils.getCount());
                 res.addAllTempInstruction(v1.getTempInstructions()); //res换成了一个新的res，重新传一遍v1的语句
-                if (v1 instanceof IrConstant) { //如果是常数，看是否为0，不为0，就跳到传进来的IfLabel中；如果为0，就跳到nextLabel处
+                if (v1 instanceof IrConstantVal) { //如果是常数，看是否为0，不为0，就跳到传进来的IfLabel中；如果为0，就跳到nextLabel处
                     IrGotoBr g;
                     if (((IrConstantVal) v1).getVal() == 0) {
                         g = new IrGotoBr(nextLabel);

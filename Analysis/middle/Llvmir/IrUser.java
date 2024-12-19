@@ -1,5 +1,7 @@
 package Analysis.middle.Llvmir;
 
+import Analysis.middle.Llvmir.ValueType.Constant.IrConstant;
+
 import java.util.LinkedList;
 
 public class IrUser extends IrValue{
@@ -15,10 +17,11 @@ public class IrUser extends IrValue{
     }
 
     public void setOperand(IrValue value, int index) {
+        IrValue v = value instanceof IrConstant ? value : new IrValue(value);
         if (index >= operands.size()) {
-            operands.add(value);
+            operands.add(v);
         } else {
-            operands.set(index, value);
+            operands.set(index, v);
         }
     }
 

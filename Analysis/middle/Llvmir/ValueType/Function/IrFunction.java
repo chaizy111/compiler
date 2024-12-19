@@ -24,6 +24,10 @@ public class IrFunction extends IrValue implements IrNode {
         this.arguments = arguments;
     }
 
+    public LinkedList<IrArgument> getArguments() {
+        return arguments;
+    }
+
     public void setIrBlock(IrBasicBlock irBlock) {
         this.irBlock = irBlock;
     }
