@@ -1,6 +1,6 @@
-import Analysis.Lexer;
-import Analysis.Parser;
-import Analysis.Visitor;
+import Analysis.frontend.Lexer;
+import Analysis.frontend.Parser;
+import Analysis.middle.Visitor;
 import Error.ErrorDealer;
 
 import java.io.*;
