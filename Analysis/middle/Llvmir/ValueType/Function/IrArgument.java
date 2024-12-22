@@ -24,7 +24,7 @@ public class IrArgument extends IrValue implements IrNode {
     @Override
     public ArrayList<String> output() {
         ArrayList<String> res = new ArrayList<>();
-        String s = this.getType().output().get(0) + " %" + rank;
+        String s = this.getType().output().get(0) + " %r." + rank;
         res.add(s);
         return res;
     }

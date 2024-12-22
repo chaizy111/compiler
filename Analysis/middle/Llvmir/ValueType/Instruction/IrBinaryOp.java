@@ -29,31 +29,31 @@ public class IrBinaryOp extends IrInstruction{
         if (l instanceof IrConstantVal) {
             left = String.valueOf(((IrConstantVal) l).getVal());
         } else {
-            left = l.getRegisterName();
+            left = "%r."+l.getRegisterName();
             t = l.getType();
         }
         if (r instanceof IrConstantVal) {
             right = String.valueOf(((IrConstantVal) r).getVal());
         } else {
-            right = r.getRegisterName();
+            right = "%r."+r.getRegisterName();
             t = r.getType();
         }
 
         switch (operationTy) {
             case Add:
-                s = this.getRegisterName() + " = add nsw " + t.output().get(0) + " " + left + ", " + right + "\n";
+                s = "%r."+this.getRegisterName() + " = add nsw " + t.output().get(0) + " " + left + ", " + right + "\n";
                 break;
             case Sub:
-                s = this.getRegisterName() + " = sub nsw " + t.output().get(0) + " " + left + ", " + right + "\n";
+                s = "%r."+this.getRegisterName() + " = sub nsw " + t.output().get(0) + " " + left + ", " + right + "\n";
                 break;
             case Mul:
-                s = this.getRegisterName() + " = mul nsw " + t.output().get(0) + " " + left + ", " + right + "\n";
+                s = "%r."+this.getRegisterName() + " = mul nsw " + t.output().get(0) + " " + left + ", " + right + "\n";
                 break;
             case Div:
-                s = this.getRegisterName() + " = sdiv " + t.output().get(0) + " " + left + ", " + right + "\n";
+                s = "%r."+this.getRegisterName() + " = sdiv " + t.output().get(0) + " " + left + ", " + right + "\n";
                 break;
             case Mod:
-                s = this.getRegisterName() + " = srem " + t.output().get(0) + " " + left + ", " + right + "\n";
+                s = "%r."+this.getRegisterName() + " = srem " + t.output().get(0) + " " + left + ", " + right + "\n";
                 break;
             default:
                 s = "wrong";

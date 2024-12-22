@@ -3,6 +3,7 @@ package Analysis.middle.Llvmir.ValueType.Instruction;
 import Analysis.middle.Llvmir.Type.IrArrayTy;
 import Analysis.middle.Llvmir.Type.IrPointerTy;
 import Analysis.middle.Llvmir.Type.IrType;
+import Analysis.middle.Llvmir.ValueType.Global.IrGlobalVariable;
 
 import java.util.ArrayList;
 
@@ -29,6 +30,7 @@ public class IrGetelementptr extends IrInstruction{
     public ArrayList<String> output() {
         ArrayList<String> res = new ArrayList<>();
         StringBuilder s = new StringBuilder();
+        s.append("%r.");
         s.append(this.getRegisterName());
         s.append(" = getelementptr inbounds ");
         s.append(outputType.output().get(0));
@@ -36,7 +38,12 @@ public class IrGetelementptr extends IrInstruction{
         IrPointerTy t = new IrPointerTy();
         t.setType(outputType);
         s.append(t.output().get(0));
-        s.append(" ");
+        if (this.getOperand(0).getRegisterName().charAt(0) < '0' || this.getOperand(0).getRegisterName().charAt(0) > '9') {
+            //因为可以取全局变量，所以前边的符号不一样
+            s.append("@");
+        } else {
+            s.append("%r.");
+        }
         s.append(this.getOperand(0).getRegisterName());
         if (outputType instanceof IrArrayTy) s.append(", i32 0"); //函数中的没有第一个i32 0
         s.append(", i32 ");

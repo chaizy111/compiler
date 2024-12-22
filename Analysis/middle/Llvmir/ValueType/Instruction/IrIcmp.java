@@ -11,7 +11,7 @@ public class IrIcmp extends IrInstruction{
 
     public IrIcmp(String kind, int rname, IrType type) {
         this.kind = kind;
-        this.setRegisterName("%" + rname);
+        this.setRegisterName(String.valueOf(rname));
         this.setType(type);
     }
 
@@ -38,14 +38,14 @@ public class IrIcmp extends IrInstruction{
         if (l instanceof IrConstantVal) {
             left = String.valueOf(((IrConstantVal) l).getVal());
         } else {
-            left = l.getRegisterName();
+            left = "%r."+l.getRegisterName();
         }
         if (r instanceof IrConstantVal) {
             right = String.valueOf(((IrConstantVal) r).getVal());
         } else {
-            right = r.getRegisterName();
+            right = "%r."+r.getRegisterName();
         }
-        s = this.getRegisterName() + " = icmp " + kind + " " + l.getType().output().get(0) + " " + left + ", " + right + "\n";
+        s = "%r."+this.getRegisterName() + " = icmp " + kind + " " + l.getType().output().get(0) + " " + left + ", " + right + "\n";
         res.add(s);
         return res;
     }

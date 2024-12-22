@@ -42,7 +42,7 @@ public class IrGlobalConstString extends IrValue implements IrNode {
     @Override
     public ArrayList<String> output() {
         ArrayList<String> res = new ArrayList<>();
-        String s1 = this.getRegisterName() + " = private unnamed_addr constant [" + length + " x i8] c\"" + s + "\"\n";
+        String s1 = "@.str" + this.getRegisterName() + " = private unnamed_addr constant [" + length + " x i8] c\"" + s + "\"\n";
         res.add(s1);
         return res;
     }

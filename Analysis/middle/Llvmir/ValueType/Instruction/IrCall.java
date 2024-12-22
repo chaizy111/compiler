@@ -40,6 +40,7 @@ public class IrCall extends IrInstruction{
             if (this.getType() instanceof IrVoidTy) { // void 型， 没有返回值，不需要用到registerName
                 s.append("call void");
             } else { //有返回值，要写成“%i = call”型
+                s.append("%r.");
                 s.append(this.getRegisterName());
                 s.append(" = call ");
                 s.append(this.getType().output().get(0));
@@ -54,6 +55,12 @@ public class IrCall extends IrInstruction{
                 if (v instanceof IrConstantVal) { //注意参数是constant的情况
                     s.append(((IrConstantVal) v).getVal());
                 } else {
+                    if (v.getRegisterName().charAt(0) < '0' || v.getRegisterName().charAt(0) > '9') {
+                        //可能传全局变量进去
+                        s.append("@");
+                    } else {
+                        s.append("%r.");
+                    }
                     s.append(v.getRegisterName());
                 }
                 if (i + 1 != paraNum) {

@@ -25,7 +25,7 @@ public class IrRet extends IrInstruction{
         } else if (result != 2147483647){ //常值型
             s = s + this.getType().output().get(0) + " " + result + "\n";
         } else { // 返回结果存储在寄存器中的类型
-            s = s + this.getType().output().get(0) + " " + this.getRegisterName() + "\n";
+            s = s + this.getType().output().get(0) + " " + "%r."+this.getRegisterName() + "\n";
         }
         res.add(s);
         return res;

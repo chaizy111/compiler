@@ -55,7 +55,7 @@ public class IrValue {
         this.name = name;
     }
 
-    public void setConst(boolean aConst) { //TODO: 在定义的时候要注意配置这个属性，用于错误判断，对于代码生成并无作用
+    public void setConst(boolean aConst) { //在定义的时候要注意配置这个属性，用于错误判断，对于代码生成并无作用
         isConst = aConst;
     }
 

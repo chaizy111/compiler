@@ -18,6 +18,7 @@ public class IrStore extends IrInstruction{
         ArrayList<String> res = new ArrayList<>();
         IrValue l = this.getOperand(0);
         IrValue r = this.getOperand(1);
+        String left;
         String right;
         if (r instanceof IrConstant) {
             right = String.valueOf(((IrConstantVal) r).getVal());
@@ -25,13 +26,18 @@ public class IrStore extends IrInstruction{
                 r.setType(((IrPointerTy) l.getType()).getType());
             }
         } else {
-            right = r.getRegisterName();
+            right = "%r."+r.getRegisterName();
         }
         if (r.getType() instanceof IrPointerTy && r instanceof IrConstantVal) { //会出现int类型突然变成指针的问题，不知道是怎么回事，用这个方法改
             IrType t = ((IrPointerTy) r.getType()).getType();
             r.setType(t);
         }
-        String s = "store " + r.getType().output().get(0) + " " + right + ", " + l.getType().output().get(0) + " " + l.getRegisterName() + "\n";
+        if (l.getRegisterName().charAt(0) < '0' || l.getRegisterName().charAt(0) > '9') {
+            left = "@"+l.getRegisterName();
+        } else {
+            left = "%r."+l.getRegisterName();
+        }
+        String s = "store " + r.getType().output().get(0) + " " + right + ", " + l.getType().output().get(0) + " " + left + "\n";
         res.add(s);
         return res;
     }

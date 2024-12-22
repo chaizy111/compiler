@@ -17,7 +17,7 @@ public class IrBr extends IrInstruction{
     public ArrayList<String> output() {
         ArrayList<String> res = new ArrayList<>();
         IrValue cond = this.getOperand(0);
-        String s = "br i1 " + cond.getRegisterName() + ", label " + iftrue.getLabelName() + ", label " + iffalse.getLabelName() + "\n";
+        String s = "br i1 " + "%r."+cond.getRegisterName() + ", label " + iftrue.getLabelName() + ", label " + iffalse.getLabelName() + "\n";
         res.add(s);
         return res;
     }

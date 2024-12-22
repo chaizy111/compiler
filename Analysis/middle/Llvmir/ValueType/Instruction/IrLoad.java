@@ -1,6 +1,7 @@
 package Analysis.middle.Llvmir.ValueType.Instruction;
 
 import Analysis.middle.Llvmir.IrValue;
+import Analysis.middle.Llvmir.ValueType.Global.IrGlobalVariable;
 
 import java.util.ArrayList;
 
@@ -13,9 +14,15 @@ public class IrLoad extends IrInstruction{
     @Override
     public ArrayList<String> output() {
         IrValue v = this.getOperand(0);
+        String r;
+        if (v.getRegisterName().charAt(0) < '0' || v.getRegisterName().charAt(0) > '9') { //是全局变量
+            r = "@"+v.getRegisterName();
+        } else {
+            r = "%r."+v.getRegisterName();
+        }
         ArrayList<String> res = new ArrayList<>();
-        String s = this.getRegisterName() + " = load " + this.getType().output().get(0) +
-                ", " + v.getType().output().get(0) + " " + v.getRegisterName() + "\n";
+        String s = "%r."+this.getRegisterName() + " = load " + this.getType().output().get(0) +
+                ", " + v.getType().output().get(0) + " " + r + "\n";
         res.add(s);
         return res;
     }
