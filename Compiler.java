@@ -1,5 +1,6 @@
 import Analysis.frontend.Lexer;
 import Analysis.frontend.Parser;
+import Analysis.middle.SymbolVisitor;
 import Analysis.middle.Visitor;
 import Error.ErrorDealer;
 
@@ -19,8 +20,12 @@ public class Compiler {
 //        lexer.printToken();
         Parser parser = new Parser(lexer, output, errorDealer);
         parser.parse();
-        Visitor visitor = new Visitor(parser.getCompUnit(), output, errorDealer);
-        visitor.visit();
+        SymbolVisitor symbolVisitor = new SymbolVisitor(parser.getCompUnit(), output, errorDealer);
+        symbolVisitor.visit();
+        if (errorDealer.isNoError()) {
+            Visitor visitor = new Visitor(parser.getCompUnit(), output, errorDealer);
+            visitor.visit();
+        }
 
         errorDealer.printError();
 

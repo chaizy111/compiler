@@ -247,6 +247,7 @@ public class Visitor {
         if(isDuplicateSymbol(s.getSymbolName())) {
             int errorLine = constDef.getIdent().getLine();
             errorDealer.errorB(errorLine);
+            return null;
         } else { // 配置完成并实现错误处理后，在最后把symbol加到表中
             addSymbol(s);
         }
@@ -335,6 +336,7 @@ public class Visitor {
         if(isDuplicateSymbol(s.getSymbolName())) {
             int errorLine = constDef.getIdent().getLine();
             errorDealer.errorB(errorLine);
+            return null;
         } else { // 配置完成并实现错误处理后，在最后把symbol加到表中
             s.setIrValue(irAlloca);
             addSymbol(s);
@@ -437,13 +439,7 @@ public class Visitor {
         if (valDef.getInitVal() != null) {
             s.setValue(visitInitVal(valDef.getInitVal()));
         }
-        //错误处理
-        if(isDuplicateSymbol(s.getSymbolName())) {
-            int errorLine = valDef.getIdent().getLine();
-            errorDealer.errorB(errorLine);
-        } else { // 配置完成并实现错误处理后，在最后把symbol加到表中
-            addSymbol(s);
-        }
+
         //配置IrGlobalVariable
         IrGlobalVariable irGlobalVariable = new IrGlobalVariable("@" + s.getSymbolName());
         IrType t = s.getBtype() == 0 ? new IrIntegerTy() : new IrCharTy();
@@ -478,6 +474,15 @@ public class Visitor {
         }
         irGlobalVariable.setRegisterName(s.getSymbolName());
         s.setIrValue(irGlobalVariable); // 配置完成后将irGlobalVariable加到symbol中
+
+        //错误处理
+        if(isDuplicateSymbol(s.getSymbolName())) {
+            int errorLine = valDef.getIdent().getLine();
+            errorDealer.errorB(errorLine);
+            return null;
+        } else { // 配置完成并实现错误处理后，在最后把symbol加到表中
+            addSymbol(s);
+        }
         return irGlobalVariable;
     }
 
@@ -567,6 +572,7 @@ public class Visitor {
         if(isDuplicateSymbol(s.getSymbolName())) {
             int errorLine = valDef.getIdent().getLine();
             errorDealer.errorB(errorLine);
+            return null;
         } else { // 配置完成并实现错误处理后，在最后把symbol加到表中
             s.setIrValue(irAlloca);
             addSymbol(s);
@@ -657,6 +663,7 @@ public class Visitor {
         if(isDuplicateSymbol(s.getSymbolName())) {
             int errorLine = funcDef.getIdent().getLine();
             errorDealer.errorB(errorLine);
+            return null;
         } else {
             addSymbol(s);
         } //防止递归，一定要在进入新func的block前加进去
@@ -755,6 +762,7 @@ public class Visitor {
         if(isDuplicateSymbol(s.getSymbolName())) {
             int errorLine = funcFParam.getIdent().getLine();
             errorDealer.errorB(errorLine);
+            return null;
         } else { // 配置完成并实现错误处理后，在最后把symbol加到表中
             addSymbol(s);
         }
@@ -788,6 +796,7 @@ public class Visitor {
                     if (returnStmt.getExp() != null) {
                         int errorLine = returnStmt.getLine();
                         errorDealer.errorF(errorLine);
+                        continue; //出错就跳过
                     }
                 }
                 IrLabel label = new IrLabel(cntUtils.getCount());
@@ -835,7 +844,7 @@ public class Visitor {
         // 错误处理
         if (funcType != 2 && returnStmt == null) { //不是void型函数且没有返回语句
             int errorLine = block.getEndLine();
-            errorDealer.errorG(errorLine);
+            errorDealer.errorG(errorLine); //todo：这个可以正常返回？
         }
         if (funcType == 2 && returnStmt == null) { //是void型函数且没有返回语句
             IrLabel label = new IrLabel(cntUtils.getCount());
@@ -886,7 +895,7 @@ public class Visitor {
         } else if (stmt.getbOrC() != null) { // 处理break和continue
             if (!isInForBlock) { //不是for循环中的break与continue，直接错误处理
                 int errorLine = stmt.getbOrC().getLine();
-                errorDealer.errorM(errorLine);
+                errorDealer.errorM(errorLine); //返回一个什么都没有的IrValue
             } else {
                 IrValue res = new IrValue();
                 if (stmt.getbOrC().getType() == TokenType.tokenType.BREAKTK) { //这里要把break和continue放到一个新块中
@@ -1013,7 +1022,7 @@ public class Visitor {
         if (funcType == 2) { // 如果在void函数中，就报错
             if (returnStmt.getExp() != null) {
                 int errorLine = returnStmt.getLine();
-                errorDealer.errorF(errorLine);
+                errorDealer.errorF(errorLine); //返回一个什么都没有的IrValue
                 return new IrValue();
             }
         }
@@ -1069,6 +1078,7 @@ public class Visitor {
         if (printfStmt.getFCharacterNumInString() != printfStmt.getExpArrayList().size()) {
             int errorLine = printfStmt.getLine();
             errorDealer.errorL(errorLine);
+            return new IrValue();//返回一个什么的都没有的IrValue
         }
         LinkedList<IrGlobalConstString> str = new LinkedList<>(); //按顺序存储被%d，%c分割出来的常量字符串
         LinkedList<String> kind = new LinkedList<>(); //存储出现顺序
@@ -1171,6 +1181,7 @@ public class Visitor {
         if (isConstSymbol(t.getString())) {
             int errorLine = t.getLine();
             errorDealer.errorH(errorLine);
+            return new IrValue();//返回一个什么都没有的IrValue
         }
         IrValue res = new IrValue();
         if (lValStmt.isGetChar()) { //处理getChar与getInt类型函数调用 //注意可能的类型转换，类型转换的指令根据等号左边的类型判断
@@ -1237,6 +1248,7 @@ public class Visitor {
         if (isConstSymbol(t.getString())) {
             int errorLine = t.getLine();
             errorDealer.errorH(errorLine);
+            return new IrValue();//返回一个什么都没有的IrValue
         }
         //再处理LVal与exp
         //对于assign型语句，即Lval = exp型的，先通过visitLVal获取左边的值，从返回的IrValue中取出regisiterName用于构建Instruction
@@ -1473,6 +1485,7 @@ public class Visitor {
             if (isUnDefinedSymbol(t.getString())) {
                 int errorLine = t.getLine();
                 errorDealer.errorC(errorLine);
+                return new IrValue();//返回一个什么都没有的IrValue
             } else {
                 Symbol s = getSymbol(t.getString());
                 FuncValue sValue = (FuncValue) s.getValue();
@@ -1482,13 +1495,14 @@ public class Visitor {
                     if (sValue.getParaNum() != unaryExp.getFuncRParams().getExpArrayList().size()) {
                         int errorLine = t.getLine();
                         errorDealer.errorD(errorLine);
+                        return new IrValue();//返回一个什么都没有的IrValue
                     } else {//再处理错误e，依次与定义比较每一个参数的类型
                         SymbolTable symbolTable = symbolTables.get(sValue.getParaTableId());
                         int i = 0;
                         for (Symbol ss:symbolTable.getDirectory().values()) {
                             if (ss.judgeKindN() != paraList.get(i).judgeKindN()) {
                                 int errorLine = t.getLine();
-                                errorDealer.errorE(errorLine);
+                                errorDealer.errorE(errorLine); //todo:这个错误的处理还要再思考
                                 break;
                             }
                             i++;

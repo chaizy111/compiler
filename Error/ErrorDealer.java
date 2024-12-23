@@ -98,6 +98,13 @@ public class ErrorDealer {
         list.put(n, l);
     }
 
+    public boolean isNoError() {
+        for (ArrayList<ErrorItem> l:list.values()) {
+            if (!l.isEmpty()) return false;
+        }
+        return true;
+    }
+
     public void printError() throws IOException {
         for(int i = 0; i <= maxLine; i++) {
             if(list.containsKey(i)) {
