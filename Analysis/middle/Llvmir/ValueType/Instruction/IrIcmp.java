@@ -9,10 +9,12 @@ import java.util.ArrayList;
 public class IrIcmp extends IrInstruction{
     private String kind;
 
-    public IrIcmp(String kind, int rname, IrType type) {
+    public IrIcmp(String kind, int rname, IrType type, IrValue operand0, IrValue operand1) {
         this.kind = kind;
         this.setRegisterName(String.valueOf(rname));
         this.setType(type);
+        this.setOperand(operand0, 0);
+        this.setOperand(operand1, 1);
     }
 
     public IrIcmp(IrIcmp icmp){

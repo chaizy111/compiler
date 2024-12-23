@@ -13,6 +13,11 @@ public class IrStore extends IrInstruction{
         super();
     }
 
+    public IrStore(IrValue operand0, IrValue operand1) {
+        this.setOperand(operand0, 0);
+        this.setOperand(operand1, 1);
+    }
+
     @Override
     public ArrayList<String> output() {
         ArrayList<String> res = new ArrayList<>();
@@ -32,7 +37,7 @@ public class IrStore extends IrInstruction{
             IrType t = ((IrPointerTy) r.getType()).getType();
             r.setType(t);
         }
-        if (l.getRegisterName().charAt(0) < '0' || l.getRegisterName().charAt(0) > '9') {
+        if (l.getRegisterName().charAt(0) < '0' || l.getRegisterName().charAt(0) > '9') { //区分寄存器名
             left = "@"+l.getRegisterName();
         } else {
             left = "%r."+l.getRegisterName();

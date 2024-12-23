@@ -1,5 +1,6 @@
 package Analysis.middle.Llvmir.ValueType.Instruction;
 
+import Analysis.middle.Llvmir.IrValue;
 import Analysis.middle.Llvmir.Type.IrArrayTy;
 import Analysis.middle.Llvmir.Type.IrPointerTy;
 import Analysis.middle.Llvmir.Type.IrType;
@@ -9,11 +10,18 @@ import java.util.ArrayList;
 
 public class IrGetelementptr extends IrInstruction{
     private IrType outputType; // output时专门使用的type
-    private String exc; //数组的偏移量，默认为0
+    private String exc = "0"; //数组的偏移量，默认为0
 
     public IrGetelementptr() {
         super();
-        exc = "0";
+    }
+
+    public IrGetelementptr(String exc, IrType outputType, IrType type, IrValue operand0, int rname) {
+        this.exc = exc;
+        this.outputType = outputType;
+        this.setType(type);
+        this.setOperand(operand0, 0);
+        this.setRegisterName(String.valueOf(rname));
     }
 
     public void setExc(String exc) {

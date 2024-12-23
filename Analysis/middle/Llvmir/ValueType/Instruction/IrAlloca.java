@@ -7,16 +7,19 @@ import java.util.ArrayList;
 public class IrAlloca extends IrInstruction{
     private IrType allocaType;
 
-    public void setAllocaType(IrType allocaType) {
-        this.allocaType = allocaType;
-    }
-
     public IrType getAllocaType() {
         return allocaType;
     }
 
     public IrAlloca() {
         super();
+    }
+
+    public IrAlloca(boolean isConst, IrType allocaType, IrType type, int rname) {
+        this.setConst(isConst);
+        this.allocaType = allocaType;
+        this.setType(type);
+        this.setRegisterName(String.valueOf(rname));
     }
 
     // <result> = alloca <type>

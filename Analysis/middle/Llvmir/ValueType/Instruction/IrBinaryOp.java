@@ -13,6 +13,13 @@ public class IrBinaryOp extends IrInstruction{
         super();
     }
 
+    public IrBinaryOp(int rname, IrType type, IrValue operand0, IrValue operand1) {
+        this.setRegisterName(String.valueOf(rname));
+        this.setType(type);
+        this.setOperand(operand0, 0);
+        this.setOperand(operand1, 1);
+    }
+
     public void setOperationTy(IrInstructionType.irIntructionType operationTy) {
         this.operationTy = operationTy;
     }
@@ -38,7 +45,9 @@ public class IrBinaryOp extends IrInstruction{
             right = "%r."+r.getRegisterName();
             t = r.getType();
         }
-
+        if (this.getType() != null) {
+            t = this.getType();
+        }
         switch (operationTy) {
             case Add:
                 s = "%r."+this.getRegisterName() + " = add nsw " + t.output().get(0) + " " + left + ", " + right + "\n";
