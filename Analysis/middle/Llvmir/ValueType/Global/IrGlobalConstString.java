@@ -6,12 +6,13 @@ import Analysis.middle.Llvmir.IrValue;
 import java.util.ArrayList;
 
 public class IrGlobalConstString extends IrValue implements IrNode {
-    private String s;
+    private String  s = "wrong";
     private int length;
 
-    public IrGlobalConstString() {
+    public IrGlobalConstString(String s) {
         super();
-        s = "wrong";
+        setS(s);
+        setLength();
     }
 
     public void setS(String s) { // 注意 LLVM IR 中需要对 \n 和 \0 等进行转义

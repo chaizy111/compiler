@@ -6,6 +6,11 @@ public class IrArrayTy extends IrType{
     private int arraySize;
     private IrType arrayType;
 
+    public IrArrayTy(IrType arrayType, int arraySize) {
+        this.arrayType = arrayType;
+        this.arraySize = arraySize;
+    }
+
     public void setArrayType(IrType arrayType) {
         this.arrayType = arrayType;
     }

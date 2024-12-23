@@ -1,6 +1,7 @@
 package Analysis.middle.Llvmir.ValueType.Instruction;
 
 import Analysis.middle.Llvmir.IrValue;
+import Analysis.middle.Llvmir.Type.IrType;
 import Analysis.middle.Llvmir.Type.IrVoidTy;
 import Analysis.middle.Llvmir.ValueType.Constant.IrConstantVal;
 
@@ -13,6 +14,13 @@ public class IrCall extends IrInstruction{
 
     public IrCall() {
         super();
+    }
+
+    public IrCall(int rname, int paraNum, String funcName, IrType type) {
+        this.setRegisterName(String.valueOf(rname));
+        this.paraNum = paraNum;
+        this.funcName = funcName;
+        this.setType(type);
     }
 
     public void setParaNum(int paraNum) {

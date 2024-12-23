@@ -1,6 +1,7 @@
 package Analysis.middle.Llvmir.ValueType.Instruction;
 
 import Analysis.middle.Llvmir.IrValue;
+import Analysis.middle.Llvmir.Type.IrType;
 import Analysis.middle.Llvmir.ValueType.Global.IrGlobalVariable;
 
 import java.util.ArrayList;
@@ -8,6 +9,12 @@ import java.util.ArrayList;
 public class IrLoad extends IrInstruction{
     public IrLoad() {
         super();
+    }
+
+    public IrLoad(int rname, IrType type, IrValue operand0) {
+        this.setRegisterName(String.valueOf(rname));
+        this.setType(type);
+        this.setOperand(operand0, 0);
     }
 
     //<result> = load <ty>, ptr <pointer>

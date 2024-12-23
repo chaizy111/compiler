@@ -5,11 +5,7 @@ import java.util.ArrayList;
 public class IrPointerTy extends IrType {
     private IrType type;
 
-    public IrPointerTy() {
-        type = null;
-    }
-
-    public void setType(IrType type) {
+    public IrPointerTy(IrType type) {
         this.type = type;
     }
 

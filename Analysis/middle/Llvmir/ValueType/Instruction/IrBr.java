@@ -8,9 +8,10 @@ public class IrBr extends IrInstruction{
     private IrLabel iftrue;
     private IrLabel iffalse;
 
-    public IrBr(IrLabel iftrue, IrLabel iffalse) {
+    public IrBr(IrLabel iftrue, IrLabel iffalse, IrValue operand0) {
         this.iftrue = iftrue;
         this.iffalse = iffalse;
+        this.setOperand(operand0, 0);
     }
 
     @Override

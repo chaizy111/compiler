@@ -43,8 +43,7 @@ public class IrGetelementptr extends IrInstruction{
         s.append(" = getelementptr inbounds ");
         s.append(outputType.output().get(0));
         s.append(", ");
-        IrPointerTy t = new IrPointerTy();
-        t.setType(outputType);
+        IrPointerTy t = new IrPointerTy(outputType);
         s.append(t.output().get(0));
         if (this.getOperand(0).getRegisterName().charAt(0) < '0' || this.getOperand(0).getRegisterName().charAt(0) > '9') {
             //因为可以取全局变量，所以前边的符号不一样
