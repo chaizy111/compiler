@@ -354,7 +354,7 @@ public class SymbolVisitor {
         visitCond(f.getC());
         visitForStmt(f.getForStmt2());
         if (f.getS().getB() != null) visitBlock(f.getS().getB(), true, isInVoidFunc);
-        else visitStmt(f.getS(), false, isInVoidFunc);
+        else visitStmt(f.getS(), true, isInVoidFunc);
     }
 
     private void visitReturnStmt(ReturnStmt returnStmt, boolean isInVoidFunc) {

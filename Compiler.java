@@ -22,8 +22,8 @@ public class Compiler {
         parser.parse();
         SymbolVisitor symbolVisitor = new SymbolVisitor(parser.getCompUnit(), output, errorDealer);
         symbolVisitor.visit();
-        if (errorDealer.isNoError()) {
-            Visitor visitor = new Visitor(parser.getCompUnit(), output, errorDealer);
+        if (errorDealer.isNoError()) { //无错误处理
+            Visitor visitor = new Visitor(parser.getCompUnit(), output);
             visitor.visit();
         }
 
