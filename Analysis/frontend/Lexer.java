@@ -4,6 +4,7 @@ import Analysis.frontend.Token.Token;
 import Analysis.frontend.Token.TokenType;
 import Error.ErrorDealer;
 
+import java.lang.Character;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
@@ -125,10 +126,39 @@ public class Lexer {
             currentToken = TokenType.tokenType.STRCON;
             while (true) {
                 getchar();
-                if (currentChar == '\\') { // don't care what is behind the black flash
-                    s = s.concat(currentChar.toString());
+                if (currentChar == '\\') { // care what is behind the black flash,and char behind black flash are certain
                     getchar();
-                    s = s.concat(currentChar.toString());
+                    if (currentChar == 'a') {
+                        char[] ascii = {7};
+                        s = s.concat(new String(ascii));
+                    } else if (currentChar == 'b') {
+                        char[] ascii = {8};
+                        s = s.concat(new String(ascii));
+                    } else if (currentChar == 't') {
+                        char[] ascii = {9};
+                        s = s.concat(new String(ascii));
+                    } else if (currentChar == 'n') {
+                        char[] ascii = {10};
+                        s = s.concat(new String(ascii));
+                    } else if (currentChar == 'v') {
+                        char[] ascii = {11};
+                        s = s.concat(new String(ascii));
+                    } else if (currentChar == 'f') {
+                        char[] ascii = {12};
+                        s = s.concat(new String(ascii));
+                    } else if (currentChar == '\"') {
+                        char[] ascii = {34};
+                        s = s.concat(new String(ascii));
+                    } else if (currentChar == '\'') {
+                        char[] ascii = {39};
+                        s = s.concat(new String(ascii));
+                    } else if (currentChar == '\\') {
+                        char[] ascii = {92};
+                        s = s.concat(new String(ascii));
+                    } else if (currentChar == '0') {
+                        char[] ascii = {0};
+                        s = s.concat(new String(ascii));
+                    }
                 } else if (currentChar == '\"') { // meet the other double quotation mark, then stop
                     s = s.concat(currentChar.toString());
                     break;
@@ -140,10 +170,39 @@ public class Lexer {
             currentToken = TokenType.tokenType.CHRCON;
             while (true) {
                 getchar();
-                if (currentChar == '\\') { // don't care what is behind the black flash
-                    s = s.concat(currentChar.toString());
+                if (currentChar == '\\') { // care what is behind the black flash
                     getchar();
-                    s = s.concat(currentChar.toString());
+                    if (currentChar == 'a') {
+                        char[] ascii = {7};
+                        s = s.concat(new String(ascii));
+                    } else if (currentChar == 'b') {
+                        char[] ascii = {8};
+                        s = s.concat(new String(ascii));
+                    } else if (currentChar == 't') {
+                        char[] ascii = {9};
+                        s = s.concat(new String(ascii));
+                    } else if (currentChar == 'n') {
+                        char[] ascii = {10};
+                        s = s.concat(new String(ascii));
+                    } else if (currentChar == 'v') {
+                        char[] ascii = {11};
+                        s = s.concat(new String(ascii));
+                    } else if (currentChar == 'f') {
+                        char[] ascii = {12};
+                        s = s.concat(new String(ascii));
+                    } else if (currentChar == '\"') {
+                        char[] ascii = {34};
+                        s = s.concat(new String(ascii));
+                    } else if (currentChar == '\'') {
+                        char[] ascii = {39};
+                        s = s.concat(new String(ascii));
+                    } else if (currentChar == '\\') {
+                        char[] ascii = {92};
+                        s = s.concat(new String(ascii));
+                    } else if (currentChar == '0') {
+                        char[] ascii = {0};
+                        s = s.concat(new String(ascii));
+                    }
                 } else if (currentChar == '\'') { // meet the other single quotation mark, then stop
                     s = s.concat(currentChar.toString());
                     break;

@@ -315,32 +315,6 @@ public class Visitor {
             String s = constInitVal.getStringConst().getString();
             for (int i = 1; i < s.length() - 1; i++) {
                 char c = s.charAt(i);
-                if (c == '\\') { //注意转义字符
-                    i = i + 1;
-                    char c1 = s.charAt(i);
-                    if (c1 == 'a') {
-                        value.addItem(7);
-                    } else if (c1 == 'b') {
-                        value.addItem(8);
-                    } else if (c1 == 't') {
-                        value.addItem(9);
-                    } else if (c1 == 'n') {
-                        value.addItem(10);
-                    } else if (c1 == 'v') {
-                        value.addItem(11);
-                    } else if (c1 == 'f') {
-                        value.addItem(12);
-                    } else if (c1 == '\"') {
-                        value.addItem(34);
-                    } else if (c1 == '\'') {
-                        value.addItem(39);
-                    } else if (c1 == '\\') {
-                        value.addItem(92);
-                    } else if (c1 == '0') {
-                        value.addItem(0);
-                    }
-                    continue; //‘\’后只可能出现上边几项
-                }
                 value.addItem(c);
             }
             return value;
@@ -364,42 +338,6 @@ public class Visitor {
             String s = constInitVal.getStringConst().getString();
             for (int i = 1; i < s.length() - 1; i++) {
                 char c = s.charAt(i);
-                if (c == '\\') { //注意转义字符
-                    i = i + 1;
-                    char c1 = s.charAt(i);
-                    if (c1 == 'a') {
-                        IrConstantVal constantVal = new IrConstantVal(7, new IrCharTy());
-                        res.addTempValue(constantVal);
-                    } else if (c1 == 'b') {
-                        IrConstantVal constantVal = new IrConstantVal(8, new IrCharTy());
-                        res.addTempValue(constantVal);
-                    } else if (c1 == 't') {
-                        IrConstantVal constantVal = new IrConstantVal(9, new IrCharTy());
-                        res.addTempValue(constantVal);
-                    } else if (c1 == 'n') {
-                        IrConstantVal constantVal = new IrConstantVal(10, new IrCharTy());
-                        res.addTempValue(constantVal);
-                    } else if (c1 == 'v') {
-                        IrConstantVal constantVal = new IrConstantVal(11, new IrCharTy());
-                        res.addTempValue(constantVal);
-                    } else if (c1 == 'f') {
-                        IrConstantVal constantVal = new IrConstantVal(12, new IrCharTy());
-                        res.addTempValue(constantVal);
-                    } else if (c1 == '\"') {
-                        IrConstantVal constantVal = new IrConstantVal(34, new IrCharTy());
-                        res.addTempValue(constantVal);
-                    } else if (c1 == '\'') {
-                        IrConstantVal constantVal = new IrConstantVal(39, new IrCharTy());
-                        res.addTempValue(constantVal);
-                    } else if (c1 == '\\') {
-                        IrConstantVal constantVal = new IrConstantVal(92, new IrCharTy());
-                        res.addTempValue(constantVal);
-                    } else if (c1 == '0') {
-                        IrConstantVal constantVal = new IrConstantVal(0, new IrCharTy());
-                        res.addTempValue(constantVal);
-                    }
-                    continue; //‘\’后只可能出现上边几项
-                }
                 IrConstantVal constantVal = new IrConstantVal(c, new IrCharTy());
                 res.addTempValue(constantVal);
             }
@@ -603,32 +541,6 @@ public class Visitor {
             String s = initVal.getStringConst().getString();
             for (int i = 1; i < s.length() - 1; i++) {
                 char c = s.charAt(i);
-                if (c == '\\') { //注意转义字符
-                    i = i + 1;
-                    char c1 = s.charAt(i);
-                    if (c1 == 'a') {
-                        value.addItem(7);
-                    } else if (c1 == 'b') {
-                        value.addItem(8);
-                    } else if (c1 == 't') {
-                        value.addItem(9);
-                    } else if (c1 == 'n') {
-                        value.addItem(10);
-                    } else if (c1 == 'v') {
-                        value.addItem(11);
-                    } else if (c1 == 'f') {
-                        value.addItem(12);
-                    } else if (c1 == '\"') {
-                        value.addItem(34);
-                    } else if (c1 == '\'') {
-                        value.addItem(39);
-                    } else if (c1 == '\\') {
-                        value.addItem(92);
-                    } else if (c1 == '0') {
-                        value.addItem(0);
-                    }
-                    continue; //‘\’后只可能出现上边几项
-                }
                 value.addItem(c);
             }
             return value;
@@ -652,42 +564,6 @@ public class Visitor {
             String s = initVal.getStringConst().getString();
             for (int i = 1; i < s.length() - 1; i++) {
                 char c = s.charAt(i);
-                if (c == '\\') { //注意转义字符
-                    i = i + 1;
-                    char c1 = s.charAt(i);
-                    if (c1 == 'a') {
-                        IrConstantVal constantVal = new IrConstantVal(7, new IrCharTy());
-                        res.addTempValue(constantVal);
-                    } else if (c1 == 'b') {
-                        IrConstantVal constantVal = new IrConstantVal(8, new IrCharTy());
-                        res.addTempValue(constantVal);
-                    } else if (c1 == 't') {
-                        IrConstantVal constantVal = new IrConstantVal(9, new IrCharTy());
-                        res.addTempValue(constantVal);
-                    } else if (c1 == 'n') {
-                        IrConstantVal constantVal = new IrConstantVal(10, new IrCharTy());
-                        res.addTempValue(constantVal);
-                    } else if (c1 == 'v') {
-                        IrConstantVal constantVal = new IrConstantVal(11, new IrCharTy());
-                        res.addTempValue(constantVal);
-                    } else if (c1 == 'f') {
-                        IrConstantVal constantVal = new IrConstantVal(12, new IrCharTy());
-                        res.addTempValue(constantVal);
-                    } else if (c1 == '\"') {
-                        IrConstantVal constantVal = new IrConstantVal(34, new IrCharTy());
-                        res.addTempValue(constantVal);
-                    } else if (c1 == '\'') {
-                        IrConstantVal constantVal = new IrConstantVal(39, new IrCharTy());
-                        res.addTempValue(constantVal);
-                    } else if (c1 == '\\') {
-                        IrConstantVal constantVal = new IrConstantVal(92, new IrCharTy());
-                        res.addTempValue(constantVal);
-                    } else if (c1 == '0') {
-                        IrConstantVal constantVal = new IrConstantVal(0, new IrCharTy());
-                        res.addTempValue(constantVal);
-                    }
-                    continue; //‘\’后只可能出现上边几项
-                }
                 IrConstantVal constantVal = new IrConstantVal(c, new IrCharTy());
                 res.addTempValue(constantVal);
             }
@@ -1388,31 +1264,6 @@ public class Visitor {
     }
 
     private IrValue visitCharacter(Character character) { //构建IrValue并返回 //注意‘\t’ '\0' '\a'的情况
-        char c = character.getToken().getString().charAt(1);
-        if (c == '\\') {
-            char c1 = character.getToken().getString().charAt(2);
-            if (c1 == 'a') {
-                return new IrConstantVal(7, new IrCharTy());//type为字符型
-            } else if (c1 == 'b') {
-                return new IrConstantVal(8, new IrCharTy());//type为字符型
-            } else if (c1 == 't') {
-                return new IrConstantVal(9, new IrCharTy());//type为字符型
-            } else if (c1 == 'n') {
-                return new IrConstantVal(10, new IrCharTy());//type为字符型
-            } else if (c1 == 'v') {
-                return new IrConstantVal(11, new IrCharTy());//type为字符型
-            } else if (c1 == 'f') {
-                return new IrConstantVal(12, new IrCharTy());//type为字符型
-            } else if (c1 == '\"') {
-                return new IrConstantVal(34, new IrCharTy());//type为字符型
-            } else if (c1 == '\'') {
-                return new IrConstantVal(39, new IrCharTy());//type为字符型
-            } else if (c1 == '\\') {
-                return new IrConstantVal(92, new IrCharTy());//type为字符型
-            } else if (c1 == '0') {
-                return new IrConstantVal(0, new IrCharTy());//type为字符型
-            }
-        }
         return new IrConstantVal(character.getToken().getString().charAt(1), new IrCharTy());//type为字符型
     }
 
