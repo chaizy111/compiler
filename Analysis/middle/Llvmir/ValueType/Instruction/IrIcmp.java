@@ -37,17 +37,22 @@ public class IrIcmp extends IrInstruction{
         String s;
         String left;
         String right;
+        IrType t; //t的设置防止保证左右出现常数时kind后输出的类型名的准确
         if (l instanceof IrConstantVal) {
             left = String.valueOf(((IrConstantVal) l).getVal());
+            t = r.getType();
         } else {
             left = "%r."+l.getRegisterName();
+            t = l.getType();
         }
         if (r instanceof IrConstantVal) {
             right = String.valueOf(((IrConstantVal) r).getVal());
+            t = l.getType();
         } else {
             right = "%r."+r.getRegisterName();
+            t = r.getType();
         }
-        s = "%r."+this.getRegisterName() + " = icmp " + kind + " " + l.getType().output().get(0) + " " + left + ", " + right + "\n";
+        s = "%r."+this.getRegisterName() + " = icmp " + kind + " " + t.output().get(0) + " " + left + ", " + right + "\n";
         res.add(s);
         return res;
     }

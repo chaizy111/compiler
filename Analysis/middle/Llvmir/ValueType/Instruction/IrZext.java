@@ -1,6 +1,7 @@
 package Analysis.middle.Llvmir.ValueType.Instruction;
 
 import Analysis.middle.Llvmir.IrValue;
+import Analysis.middle.Llvmir.Type.IrIntegerTy;
 import Analysis.middle.Llvmir.Type.IrType;
 
 import java.util.ArrayList;

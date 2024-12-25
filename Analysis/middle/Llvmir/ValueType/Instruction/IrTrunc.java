@@ -20,7 +20,7 @@ public class IrTrunc extends IrInstruction{ // 用于 保存时 int 转 char 例
     public ArrayList<String> output() {
         ArrayList<String> res = new ArrayList<>();
         IrValue v = this.getOperand(0);
-        String s = "%r."+this.getRegisterName() + " = trunc i32 " + "%r."+v.getRegisterName() + " to i8\n";
+        String s = "%r."+this.getRegisterName() + " = trunc i32 " + "%r."+v.getRegisterName() + " to " + this.getType().output().get(0) + "\n";
         res.add(s);
         return res;
     }
