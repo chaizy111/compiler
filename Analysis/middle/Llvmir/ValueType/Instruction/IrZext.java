@@ -11,9 +11,9 @@ public class IrZext extends IrInstruction{ //用于 char 参与运算时转 int 
         super();
     }
 
-    public IrZext(int rname, IrType type, IrValue operand){
+    public IrZext(int rname, IrValue operand){
         this.setRegisterName(String.valueOf(rname));
-        this.setType(type);
+        this.setType(new IrIntegerTy());
         this.setOperand(operand, 0);
     }
 

@@ -40,10 +40,8 @@ public class IrIcmp extends IrInstruction{
         IrType t; //t的设置防止保证左右出现常数时kind后输出的类型名的准确
         if (l instanceof IrConstantVal) {
             left = String.valueOf(((IrConstantVal) l).getVal());
-            t = r.getType();
         } else {
             left = "%r."+l.getRegisterName();
-            t = l.getType();
         }
         if (r instanceof IrConstantVal) {
             right = String.valueOf(((IrConstantVal) r).getVal());

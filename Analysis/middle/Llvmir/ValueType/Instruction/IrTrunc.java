@@ -1,6 +1,7 @@
 package Analysis.middle.Llvmir.ValueType.Instruction;
 
 import Analysis.middle.Llvmir.IrValue;
+import Analysis.middle.Llvmir.Type.IrCharTy;
 import Analysis.middle.Llvmir.Type.IrType;
 
 import java.util.ArrayList;
@@ -10,9 +11,9 @@ public class IrTrunc extends IrInstruction{ // 用于 保存时 int 转 char 例
         super();
     }
 
-    public IrTrunc(int rname, IrType type, IrValue operand) {
+    public IrTrunc(int rname, IrValue operand) {
         this.setRegisterName(String.valueOf(rname));
-        this.setType(type);
+        this.setType(new IrCharTy());
         this.setOperand(operand, 0);
     }
 
