@@ -99,7 +99,6 @@ public class Visitor {
     }
 
     private void visitCompUnit(CompUnit compUnit) {
-        if (compUnit == null) return;
         for (Decl d : compUnit.getDeclArrayList()) {
             irModule.addGlobalVariable(visitDecl(d));
         }
@@ -110,7 +109,6 @@ public class Visitor {
     }
 
     private ArrayList<IrGlobalVariable> visitDecl(Decl decl) { //原visitDecl，用于全局声明语句的分析
-        if (decl == null) return null;
         if (decl instanceof ConstDecl) {
             return visitConstDecl((ConstDecl) decl);
         } else if (decl instanceof ValDecl) {
@@ -121,7 +119,6 @@ public class Visitor {
     }
 
     private ArrayList<IrInstruction> visitDeclInFunc(Decl decl) { //一个新的visitDecl，区别与原来的，用于局部声明语句的分析
-        if (decl == null) return null;
         if (decl instanceof ConstDecl) {
             return visitConstDeclInFunc((ConstDecl) decl);
         } else if (decl instanceof ValDecl) {
@@ -205,7 +202,6 @@ public class Visitor {
         irGlobalVariable.setRegisterName(s.getSymbolName());
         irGlobalVariable.setConst(true); //区分const型与正常variable
         s.setIrValue(irGlobalVariable); // 配置完成后将irGlobalVariable加到symbol中
-
         addSymbol(s);// 配置完成并实现错误处理后，在最后把symbol加到表中
 
         return irGlobalVariable;
@@ -234,7 +230,7 @@ public class Visitor {
         IrType t = s.getBtype() == 0 ? new IrIntegerTy() : new IrCharTy();// 判断该符号的种类
         IrPointerTy pointerTy = new IrPointerTy(t);
         IrArrayTy nt; //用来配置AllocaType
-        if (s.getArraySize() != 0) {
+        if (s.getArraySize() != 0) { //todo:这里可能出现深拷贝的问题
             nt = new IrArrayTy(t, s.getArraySize());
             t = nt;
         }
@@ -280,15 +276,12 @@ public class Visitor {
                 }
                 irAlloca.setConstant(new IrConstantArray(constantVals));
             } else { //val类型，一条IrStore
-                IrConstant constant = new IrConstantVal(((IrConstantVal) v).getVal(), v.getType());
-                constant.setType(t);
+                IrConstant constant = new IrConstantVal(((IrConstantVal) v).getVal(), t);
                 irAlloca.setConstant(constant);
-
                 IrStore irStore = new IrStore(irAlloca, v);
                 instructions.add(irStore);
             }
         }
-
         s.setIrValue(irAlloca);// 配置完成并实现错误处理后，在最后把symbol加到表中
         addSymbol(s);
         return instructions;
@@ -320,7 +313,34 @@ public class Visitor {
             ArrayValue value = new ArrayValue();
             if (constInitVal.getStringConst() == null) return value; // 如果为空直接return
             String s = constInitVal.getStringConst().getString();
-            for (java.lang.Character c: s.substring(1, s.length() - 1).toCharArray()) {
+            for (int i = 1; i < s.length() - 1; i++) {
+                char c = s.charAt(i);
+                if (c == '\\') { //注意转义字符
+                    i = i + 1;
+                    char c1 = s.charAt(i);
+                    if (c1 == 'a') {
+                        value.addItem(7);
+                    } else if (c1 == 'b') {
+                        value.addItem(8);
+                    } else if (c1 == 't') {
+                        value.addItem(9);
+                    } else if (c1 == 'n') {
+                        value.addItem(10);
+                    } else if (c1 == 'v') {
+                        value.addItem(11);
+                    } else if (c1 == 'f') {
+                        value.addItem(12);
+                    } else if (c1 == '\"') {
+                        value.addItem(34);
+                    } else if (c1 == '\'') {
+                        value.addItem(39);
+                    } else if (c1 == '\\') {
+                        value.addItem(92);
+                    } else if (c1 == '0') {
+                        value.addItem(0);
+                    }
+                    continue; //‘\’后只可能出现上边几项
+                }
                 value.addItem(c);
             }
             return value;
@@ -342,9 +362,46 @@ public class Visitor {
         } else { //String型
             IrValue res = new IrValue();
             String s = constInitVal.getStringConst().getString();
-            for (java.lang.Character c: s.substring(1, s.length() - 1).toCharArray()) {
-                IrConstantVal i = new IrConstantVal(c, new IrCharTy());
-                res.addTempValue(i);
+            for (int i = 1; i < s.length() - 1; i++) {
+                char c = s.charAt(i);
+                if (c == '\\') { //注意转义字符
+                    i = i + 1;
+                    char c1 = s.charAt(i);
+                    if (c1 == 'a') {
+                        IrConstantVal constantVal = new IrConstantVal(7, new IrCharTy());
+                        res.addTempValue(constantVal);
+                    } else if (c1 == 'b') {
+                        IrConstantVal constantVal = new IrConstantVal(8, new IrCharTy());
+                        res.addTempValue(constantVal);
+                    } else if (c1 == 't') {
+                        IrConstantVal constantVal = new IrConstantVal(9, new IrCharTy());
+                        res.addTempValue(constantVal);
+                    } else if (c1 == 'n') {
+                        IrConstantVal constantVal = new IrConstantVal(10, new IrCharTy());
+                        res.addTempValue(constantVal);
+                    } else if (c1 == 'v') {
+                        IrConstantVal constantVal = new IrConstantVal(11, new IrCharTy());
+                        res.addTempValue(constantVal);
+                    } else if (c1 == 'f') {
+                        IrConstantVal constantVal = new IrConstantVal(12, new IrCharTy());
+                        res.addTempValue(constantVal);
+                    } else if (c1 == '\"') {
+                        IrConstantVal constantVal = new IrConstantVal(34, new IrCharTy());
+                        res.addTempValue(constantVal);
+                    } else if (c1 == '\'') {
+                        IrConstantVal constantVal = new IrConstantVal(39, new IrCharTy());
+                        res.addTempValue(constantVal);
+                    } else if (c1 == '\\') {
+                        IrConstantVal constantVal = new IrConstantVal(92, new IrCharTy());
+                        res.addTempValue(constantVal);
+                    } else if (c1 == '0') {
+                        IrConstantVal constantVal = new IrConstantVal(0, new IrCharTy());
+                        res.addTempValue(constantVal);
+                    }
+                    continue; //‘\’后只可能出现上边几项
+                }
+                IrConstantVal constantVal = new IrConstantVal(c, new IrCharTy());
+                res.addTempValue(constantVal);
             }
             return res;
         }
@@ -452,7 +509,7 @@ public class Visitor {
         IrType t = s.getBtype() == 0 ? new IrIntegerTy() : new IrCharTy(); // 判断该符号的种类
         IrPointerTy pointerTy = new IrPointerTy(t);
         IrArrayTy nt; //用来配置AllocaType
-        if (s.getArraySize() != 0) {
+        if (s.getArraySize() != 0) { //todo:这里会不会有深拷贝的问题
             nt = new IrArrayTy(t, s.getArraySize());
             t = nt;
         }
@@ -544,7 +601,34 @@ public class Visitor {
         }  else { //String型
             ArrayValue value = new ArrayValue();
             String s = initVal.getStringConst().getString();
-            for (java.lang.Character c: s.substring(1, s.length() - 1).toCharArray()) {
+            for (int i = 1; i < s.length() - 1; i++) {
+                char c = s.charAt(i);
+                if (c == '\\') { //注意转义字符
+                    i = i + 1;
+                    char c1 = s.charAt(i);
+                    if (c1 == 'a') {
+                        value.addItem(7);
+                    } else if (c1 == 'b') {
+                        value.addItem(8);
+                    } else if (c1 == 't') {
+                        value.addItem(9);
+                    } else if (c1 == 'n') {
+                        value.addItem(10);
+                    } else if (c1 == 'v') {
+                        value.addItem(11);
+                    } else if (c1 == 'f') {
+                        value.addItem(12);
+                    } else if (c1 == '\"') {
+                        value.addItem(34);
+                    } else if (c1 == '\'') {
+                        value.addItem(39);
+                    } else if (c1 == '\\') {
+                        value.addItem(92);
+                    } else if (c1 == '0') {
+                        value.addItem(0);
+                    }
+                    continue; //‘\’后只可能出现上边几项
+                }
                 value.addItem(c);
             }
             return value;
@@ -566,9 +650,46 @@ public class Visitor {
         } else { //String型
             IrValue res = new IrValue();
             String s = initVal.getStringConst().getString();
-            for (java.lang.Character c: s.substring(1, s.length() - 1).toCharArray()) {
-                IrConstantVal i = new IrConstantVal(c, new IrCharTy());
-                res.addTempValue(i);
+            for (int i = 1; i < s.length() - 1; i++) {
+                char c = s.charAt(i);
+                if (c == '\\') { //注意转义字符
+                    i = i + 1;
+                    char c1 = s.charAt(i);
+                    if (c1 == 'a') {
+                        IrConstantVal constantVal = new IrConstantVal(7, new IrCharTy());
+                        res.addTempValue(constantVal);
+                    } else if (c1 == 'b') {
+                        IrConstantVal constantVal = new IrConstantVal(8, new IrCharTy());
+                        res.addTempValue(constantVal);
+                    } else if (c1 == 't') {
+                        IrConstantVal constantVal = new IrConstantVal(9, new IrCharTy());
+                        res.addTempValue(constantVal);
+                    } else if (c1 == 'n') {
+                        IrConstantVal constantVal = new IrConstantVal(10, new IrCharTy());
+                        res.addTempValue(constantVal);
+                    } else if (c1 == 'v') {
+                        IrConstantVal constantVal = new IrConstantVal(11, new IrCharTy());
+                        res.addTempValue(constantVal);
+                    } else if (c1 == 'f') {
+                        IrConstantVal constantVal = new IrConstantVal(12, new IrCharTy());
+                        res.addTempValue(constantVal);
+                    } else if (c1 == '\"') {
+                        IrConstantVal constantVal = new IrConstantVal(34, new IrCharTy());
+                        res.addTempValue(constantVal);
+                    } else if (c1 == '\'') {
+                        IrConstantVal constantVal = new IrConstantVal(39, new IrCharTy());
+                        res.addTempValue(constantVal);
+                    } else if (c1 == '\\') {
+                        IrConstantVal constantVal = new IrConstantVal(92, new IrCharTy());
+                        res.addTempValue(constantVal);
+                    } else if (c1 == '0') {
+                        IrConstantVal constantVal = new IrConstantVal(0, new IrCharTy());
+                        res.addTempValue(constantVal);
+                    }
+                    continue; //‘\’后只可能出现上边几项
+                }
+                IrConstantVal constantVal = new IrConstantVal(c, new IrCharTy());
+                res.addTempValue(constantVal);
             }
             return res;
         }
@@ -683,8 +804,7 @@ public class Visitor {
         IrArgument argument = new IrArgument();
         IrType t = s.getBtype() == 0 ? new IrIntegerTy() : new IrCharTy();
         if (funcFParam.isArray()) {
-            IrPointerTy type = new IrPointerTy(t);
-            t = type;
+            t = new IrPointerTy(t);
         }
         argument.setType(t);
         argument.setName(s.getSymbolName());
@@ -696,7 +816,7 @@ public class Visitor {
     }
 
     // 由于处理逻辑不同，所以把不同的block分开
-    private IrBasicBlock visitBlock(Block block, boolean isInForBlock, int funcType, IrLabel endLabel, IrLabel continueLabel) {
+    private IrBasicBlock visitBlock(Block block, int funcType, IrLabel endLabel, IrLabel continueLabel) {
         // 多种情况，循环块与非循环块，是否为void函数中的块
         if (block == null) {
             return new IrBasicBlock();
@@ -704,7 +824,7 @@ public class Visitor {
         IrBasicBlock basicBlock = new IrBasicBlock();
         newSymbolTable();
         for (BlockItem b : block.getBlockItemArrayList()) {
-            basicBlock.addAllTempInstruction(visitBlockItem(b, isInForBlock, funcType, endLabel, continueLabel).getTempInstructions());
+            basicBlock.addAllTempInstruction(visitBlockItem(b, funcType, endLabel, continueLabel).getTempInstructions());
         }
         returnFatherTable();
         return basicBlock;
@@ -715,48 +835,13 @@ public class Visitor {
         IrBasicBlock basicBlock = new IrBasicBlock();
         ReturnStmt returnStmt = null;
         for (BlockItem b : block.getBlockItemArrayList()) {
-            if (b instanceof ReturnStmt) { // returnStmt单独处理 //todo:是否可以将其合到正常的stmt中了？
-                returnStmt = (ReturnStmt) b;
-                IrLabel label = new IrLabel(cntUtils.getCount());
-                IrGotoBr g = new IrGotoBr(label);
-                basicBlock.addTempInstruction(g);
-                basicBlock.addTempInstruction(label);
-
-                IrRet ret = new IrRet(); // 添加返回指令 //注意返回时可能的类型转换
-                IrValue v = visitExp(returnStmt.getExp(), false);//根据文法，这里肯定不是左值
-                basicBlock.addAllInstruction(v.getTempInstructions());
-                if (funcType == 0) {
-                    ret.setType(new IrIntegerTy());
-                } else if (funcType == 1) {
-                    ret.setType(new IrCharTy());
-                } else {
-                    ret.setType(new IrVoidTy());
-                }
-                if (v instanceof IrConstantVal) {
-                    //如果exp是Number或Character,那一层层向上传，最后到达这里的一定是一个IrConstant型的，
-                    // 所以如果分析的结果是IrConstant型，我们可以认为ret了一个常量
-                    ret.setResult(((IrConstantVal) v).getVal());
-                } else {//在此处有类型转换
-                    //如果不是IrConstant型，那必然经过了运算，我们去上一次分析的IrValue，其RegisterName即为记过存储的位置，传入ret即可
-                    ret.setRegisterName(v.getRegisterName());
-                    if (v.getType() instanceof IrCharTy && ret.getType() instanceof IrIntegerTy) {
-                        IrZext z = new IrZext(nowIrFunction.getNowRank(), new IrIntegerTy(), new IrValue(v));
-                        basicBlock.addInstruction(z);
-                        ret.setRegisterName(z.getRegisterName());
-                    } else if (v.getType() instanceof IrIntegerTy && ret.getType() instanceof IrCharTy) {
-                        IrTrunc t = new IrTrunc(nowIrFunction.getNowRank(), new IrCharTy(), new IrValue(v));
-                        basicBlock.addInstruction(t);
-                        ret.setRegisterName(t.getRegisterName());
-                    }
-                }
-                basicBlock.addInstruction(ret);
-                //ret块后的第一个块
-                IrLabel label1 = new IrLabel(cntUtils.getCount());
-                basicBlock.addTempInstruction(label1);
-            } else if (b instanceof Decl) {
+            if (b instanceof Decl) {
                 basicBlock.addAllInstruction(visitDeclInFunc((Decl) b));
             } else if (b instanceof Stmt) {
-                basicBlock.addAllInstruction(visitStmt((Stmt) b, false, funcType, null, null).getTempInstructions());
+                if (b instanceof ReturnStmt) {
+                    returnStmt = (ReturnStmt) b;
+                }
+                basicBlock.addAllInstruction(visitStmt((Stmt) b, funcType, null, null).getTempInstructions());
             }
         }
         if (funcType == 2 && returnStmt == null) { //是void型函数且没有返回语句
@@ -774,7 +859,7 @@ public class Visitor {
         return basicBlock;
     }
 
-    private IrValue visitBlockItem(BlockItem blockItem, boolean isInForBlock, int funcType, IrLabel endLabel , IrLabel continueLabel) {
+    private IrValue visitBlockItem(BlockItem blockItem, int funcType, IrLabel endLabel , IrLabel continueLabel) {
         if (blockItem == null) {
             return null;
         }
@@ -784,19 +869,15 @@ public class Visitor {
             value.addAllTempInstruction(instructions);
             return value;
         } else {
-            return visitStmt((Stmt) blockItem, isInForBlock, funcType, endLabel, continueLabel);
+            return visitStmt((Stmt) blockItem, funcType, endLabel, continueLabel);
         }
     }
 
-    private IrValue visitStmt(Stmt stmt, boolean isInForBlock, int funcType, IrLabel endLabel, IrLabel continueLabel) {
-        if (stmt == null) { //todo:isInForBlock是否还有用
+    private IrValue visitStmt(Stmt stmt, int funcType, IrLabel endLabel, IrLabel continueLabel) {
+        if (stmt == null) {
             return new IrValue();
-        }
-        // 由于要对for有关block进行判断，来看是否出现m错，设置了isInForBlock变量，这个变量的相关逻辑比较绕，
-        // 主要就是如果是在for的stmt是block型，则在visitBlock时就将这个属性设为true，之后这个属性便会层层下传，直到for的block分析结束
-        // 还要对是否是在void函数中进行判断，如果是在void函数中，那if，for，以及return语句就需要注意进行报错，所以需要传递isInVoidFunc参数
-        if (stmt instanceof IfStmt) {
-            return visitIf((IfStmt) stmt, isInForBlock, funcType, endLabel, continueLabel);
+        } else if (stmt instanceof IfStmt) {
+            return visitIf((IfStmt) stmt, funcType, endLabel, continueLabel);
         } else if (stmt instanceof For) {
             return visitFor((For) stmt, funcType);
         } else if (stmt instanceof ReturnStmt) {
@@ -828,14 +909,14 @@ public class Visitor {
             }
             return res;
         } else if (stmt.getB() != null) {
-            return visitBlock(stmt.getB(), isInForBlock, funcType, endLabel, continueLabel);
+            return visitBlock(stmt.getB(), funcType, endLabel, continueLabel);
         } else if (stmt.getE() != null) {
             return visitExp(stmt.getE(), false); //根据文法，这里肯定不是左值
         }
         return new IrValue();
     }
 
-    private IrValue visitIf(IfStmt ifStmt, boolean isInForBlock, int funcType, IrLabel endLabel1, IrLabel continueLabel) {
+    private IrValue visitIf(IfStmt ifStmt, int funcType, IrLabel endLabel1, IrLabel continueLabel) {
         //TODO:实际应该返回一个ArrayList<IrBlock>,但这里先返回一个 IrValue
         IrValue res = new IrValue();
         if (ifStmt == null) return res;
@@ -852,7 +933,7 @@ public class Visitor {
             res.addAllTempInstruction(v1.getTempInstructions());
             // 加if的Label，后边跟的就是stmt1中的语句
             res.addTempInstruction(ifLabel);
-            IrValue v2 = visitStmt(ifStmt.getS1(), isInForBlock, funcType, endLabel1, continueLabel);
+            IrValue v2 = visitStmt(ifStmt.getS1(), funcType, endLabel1, continueLabel);
             res.addAllTempInstruction(v2.getTempInstructions());
             //在if的stmt执行完之后要加一条goto指令跳到endLabel处
             IrGotoBr g = new IrGotoBr(endLabel);
@@ -869,14 +950,14 @@ public class Visitor {
             res.addAllTempInstruction(v1.getTempInstructions());
             // 加if的Label，后边跟的就是stmt1中的语句
             res.addTempInstruction(ifLabel);
-            IrValue v2 = visitStmt(ifStmt.getS1(), isInForBlock, funcType, endLabel1, continueLabel);
+            IrValue v2 = visitStmt(ifStmt.getS1(), funcType, endLabel1, continueLabel);
             res.addAllTempInstruction(v2.getTempInstructions());
             //在if的stmt执行完之后要加一条gotobr指令跳到endLabel处
             IrGotoBr g = new IrGotoBr(endLabel);
             res.addTempInstruction(g);
             //然后输出else的label，后边跟stmt2中的语句
             res.addTempInstruction(elseLabel);
-            IrValue v3 = visitStmt(ifStmt.getS2(), isInForBlock, funcType, endLabel1, continueLabel);
+            IrValue v3 = visitStmt(ifStmt.getS2(), funcType, endLabel1, continueLabel);
             res.addAllTempInstruction(v3.getTempInstructions());
             //else的stmt执行完也要加一句gotobr跳到endLabel处
             res.addTempInstruction(g);
@@ -907,8 +988,8 @@ public class Visitor {
         //输出完cond后输出mainLabel，开始这部分的输出,注意，这部分涉及break与continue
         res.addTempInstruction(mainLabel);
         IrValue v2;
-        if (f.getS().getB() != null) v2 = visitBlock(f.getS().getB(), true, funcType, endLabel, continueLabel);
-        else v2 = visitStmt(f.getS(), true, funcType, endLabel, continueLabel);
+        if (f.getS().getB() != null) v2 = visitBlock(f.getS().getB(), funcType, endLabel, continueLabel);
+        else v2 = visitStmt(f.getS(), funcType, endLabel, continueLabel);
         res.addAllTempInstruction(v2.getTempInstructions());
         //main跳到continueLabel
         IrGotoBr g1 = new IrGotoBr(continueLabel);
@@ -964,9 +1045,6 @@ public class Visitor {
             ret.setType(new IrVoidTy());
         }
         res.addTempInstruction(ret);
-        //ret块后的第一个块
-        IrLabel label1 = new IrLabel(cntUtils.getCount());
-        res.addTempInstruction(label1);
 
         return res;
     }
@@ -1309,7 +1387,32 @@ public class Visitor {
         return new IrConstantVal(number.getToken().getNumber(), new IrIntegerTy());//type为整型
     }
 
-    private IrValue visitCharacter(Character character) { //构建IrValue并返回
+    private IrValue visitCharacter(Character character) { //构建IrValue并返回 //注意‘\t’ '\0' '\a'的情况
+        char c = character.getToken().getString().charAt(1);
+        if (c == '\\') {
+            char c1 = character.getToken().getString().charAt(2);
+            if (c1 == 'a') {
+                return new IrConstantVal(7, new IrCharTy());//type为字符型
+            } else if (c1 == 'b') {
+                return new IrConstantVal(8, new IrCharTy());//type为字符型
+            } else if (c1 == 't') {
+                return new IrConstantVal(9, new IrCharTy());//type为字符型
+            } else if (c1 == 'n') {
+                return new IrConstantVal(10, new IrCharTy());//type为字符型
+            } else if (c1 == 'v') {
+                return new IrConstantVal(11, new IrCharTy());//type为字符型
+            } else if (c1 == 'f') {
+                return new IrConstantVal(12, new IrCharTy());//type为字符型
+            } else if (c1 == '\"') {
+                return new IrConstantVal(34, new IrCharTy());//type为字符型
+            } else if (c1 == '\'') {
+                return new IrConstantVal(39, new IrCharTy());//type为字符型
+            } else if (c1 == '\\') {
+                return new IrConstantVal(92, new IrCharTy());//type为字符型
+            } else if (c1 == '0') {
+                return new IrConstantVal(0, new IrCharTy());//type为字符型
+            }
+        }
         return new IrConstantVal(character.getToken().getString().charAt(1), new IrCharTy());//type为字符型
     }
 
