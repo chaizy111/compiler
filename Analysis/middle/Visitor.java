@@ -1143,14 +1143,8 @@ public class Visitor {
                 res.addTempInstruction(i);
                 return res;
             }
-            if (v2.isConst()) {
-                if (v2 instanceof IrGlobalVariable) {
-                    if (v2.getConstant() != null) { //说明可以取到常量，直接用于计算
-                        return v2.getConstant();
-                    }
-                } else {
-                    return v2.getConstant();
-                }
+            if (v2.isConst() && v2.getConstant() != null) {//说明可以取到常量，直接用于计算
+                return v2.getConstant();
             }
             //注意，如果是全局变量，我们需要新建一个IrValue后，生成load指令后返回
             if (!isLvalue) { //左值不要load，从其被alloca或在全局被分配的指针中load值，构造IrValue返回  //给load分配的操作数应该是指针类型的
@@ -1186,13 +1180,9 @@ public class Visitor {
             }
 
             if (num != -1 && !isLvalue) { //不是左值才能直接用
-                if (v2 instanceof IrGlobalVariable) {
-                    if (v2.getConstant() != null) { //说明可以取到常量，直接用于计算
-                        res = ((IrConstantArray) v2.getConstant()).getConstantVals().get(num);
-                        return res;
-                    }
-                } else if (v2.isConst()) {
-                    return ((IrConstantArray) v2.getConstant()).getConstantVals().get(num);
+                if (v2.isConst() && v2.getConstant() != null) {//说明可以取到常量，直接用于计算
+                    res = ((IrConstantArray) v2.getConstant()).getConstantVals().get(num);
+                    return res;
                 }
             }
 
@@ -1274,6 +1264,7 @@ public class Visitor {
             if (judge == 1) { //生成一条sub语句并实现value的更新,注意这里没有保存计算结果，可能会出现bug
                 if (v instanceof IrConstantVal) { //如果是常量，直接计算
                     ((IrConstantVal) v).setVal(-((IrConstantVal) v).getVal());
+                    v.setType(new IrIntegerTy());
                 } else { //不是常量，可能需要类型转换
                     if (v.getType().getClass() != IrIntegerTy.class) { //所有非int类型一律转成int类型
                         IrZext z = new IrZext(nowIrFunction.getNowRank(), new IrValue(v));
@@ -1282,9 +1273,10 @@ public class Visitor {
                         v.setRegisterName(z.getRegisterName());
                     }
                     IrConstantVal zero = new IrConstantVal(0, v.getType());//Type和后边的数保持一致
-                    IrBinaryOp i = new IrBinaryOp(nowIrFunction.getNowRank(), null, zero, new IrValue(v));
+                    IrBinaryOp i = new IrBinaryOp(nowIrFunction.getNowRank(), new IrIntegerTy(), zero, new IrValue(v));
                     i.setOperationTy(IrInstructionType.irIntructionType.Sub);
                     v.setRegisterName(i.getRegisterName()); //一定要更新返回IrValue的寄存器名
+                    v.setType(i.getType());
                     v.addTempInstruction(i);
                 }
             } else if (judge == 2) { //判断逻辑：如果是常量，直接看其是否为0，构造后返回，如果不是常量，实现一个icmp语句并返回
@@ -1396,8 +1388,8 @@ public class Visitor {
                         v1 = new IrConstantVal(((IrConstantVal) v1).getVal() % ((IrConstantVal) v2).getVal(), new IrIntegerTy());
                     }
                     res = v1; //这里会导致res的种类确定为IrConstVal
-                } else { //根据对应符号实现mul、div、 mod语句的生成并添加到res的tempInstructions中
-                    IrBinaryOp instruction = new IrBinaryOp(nowIrFunction.getNowRank(), v1.getType(), v1, v2);
+                } else { //根据对应符号实现mul、div、 mod语句的生成并添加到res的tempInstructions中，计算结果种类为int型
+                    IrBinaryOp instruction = new IrBinaryOp(nowIrFunction.getNowRank(), new IrIntegerTy(), v1, v2);
                     TokenType.tokenType t = mulExp.getSymbolList().get(i - 1).getType();
                     if (t == TokenType.tokenType.MULT) {
                         instruction.setOperationTy(IrInstructionType.irIntructionType.Mul);
@@ -1406,6 +1398,7 @@ public class Visitor {
                     } else {
                         instruction.setOperationTy(IrInstructionType.irIntructionType.Mod);
                     }
+                    res.setType(instruction.getType());
                     res.setRegisterName(instruction.getRegisterName());//一定要更新返回IrValue的寄存器名
                     res.addTempInstruction(instruction);
                     v1 = new IrValue(res); //深拷贝
@@ -1451,14 +1444,15 @@ public class Visitor {
                         v1 = new IrConstantVal(((IrConstantVal) v1).getVal() - ((IrConstantVal) v2).getVal(), new IrIntegerTy());
                     }
                     res = v1;
-                } else { //根据对应符号实现add, sub语句的生成并添加到res的tempInstructions中
-                    IrBinaryOp instruction = new IrBinaryOp(nowIrFunction.getNowRank(), v1.getType(), v1, v2);
+                } else { //根据对应符号实现add, sub语句的生成并添加到res的tempInstructions中,计算结果种类为int型
+                    IrBinaryOp instruction = new IrBinaryOp(nowIrFunction.getNowRank(), new IrIntegerTy(), v1, v2);
                     TokenType.tokenType t = addExp.getSymbolList().get(i - 1).getType();
                     if (t == TokenType.tokenType.PLUS) {
                         instruction.setOperationTy(IrInstructionType.irIntructionType.Add);
                     } else if (t == TokenType.tokenType.MINU) {
                         instruction.setOperationTy(IrInstructionType.irIntructionType.Sub);
                     }
+                    res.setType(instruction.getType());
                     res.setRegisterName(instruction.getRegisterName());//一定要更新返回IrValue的寄存器名
                     res.addTempInstruction(instruction);
                     v1 = new IrValue(res); //这里一定要用深拷贝
@@ -1649,7 +1643,7 @@ public class Visitor {
                 res.addTempInstruction(b);
                 //声明lAndExp中的下一个Label
                 res.addTempInstruction(l);
-                if ( i == lAndExp.getEqExpArrayList().size() - 1) { //如果全成立，跳到ifLabel
+                if (i == lAndExp.getEqExpArrayList().size() - 1) { //如果全成立，跳到ifLabel
                     res.addTempInstruction(new IrGotoBr(ifLabel));
                 }
             }
